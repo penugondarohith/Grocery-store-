@@ -1,6 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
-import { sendSuccess, sendCreated, parsePagination, buildPagination } from '../utils/response.utils';
+import { sendSuccess, sendCreated } from '../utils/response.utils';
 import { NotFoundError } from '../utils/errors';
 import prisma from '../config/database';
 

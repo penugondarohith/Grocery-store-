@@ -96,19 +96,25 @@ export class AuthService {
 
   /** Reset password */
   async resetPassword(token: string, newPassword: string): Promise<void> {
+    let userId: string;
+    let timestamp: string;
+
     try {
       const decoded = Buffer.from(token, 'base64').toString('utf8');
-      const [userId, timestamp] = decoded.split(':');
-      if (Date.now() - parseInt(timestamp) > 60 * 60 * 1000) {
-        throw new BadRequestError('Reset token expired');
-      }
-      const hashed = await hashPassword(newPassword);
-      await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
-      // Invalidate all refresh tokens
-      await prisma.refreshToken.deleteMany({ where: { userId } });
+      [userId, timestamp] = decoded.split(':');
+      if (!userId || !timestamp) throw new Error('malformed');
     } catch {
-      throw new BadRequestError('Invalid or expired reset token');
+      throw new BadRequestError('Invalid reset token');
     }
+
+    if (Date.now() - parseInt(timestamp, 10) > 60 * 60 * 1000) {
+      throw new BadRequestError('Reset token has expired. Please request a new one.');
+    }
+
+    const hashed = await hashPassword(newPassword);
+    await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    // Invalidate all existing refresh tokens for this user
+    await prisma.refreshToken.deleteMany({ where: { userId } });
   }
 
   private async saveRefreshToken(userId: string, token: string): Promise<void> {
