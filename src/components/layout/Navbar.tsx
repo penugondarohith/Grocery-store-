@@ -15,10 +15,12 @@ import {
   Bell,
   MapPin,
   Leaf,
+  LogOut,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { categories } from "@/data/categories";
+import { useAuthContext } from "@/context/AuthContext";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -27,6 +29,9 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const { itemCount } = useCart();
   const { count: wishCount } = useWishlist();
+  const { user, loading, signOut } = useAuthContext();
+  const displayName = user?.user_metadata?.full_name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'Account';
+  const avatarLetter = displayName[0]?.toUpperCase() ?? 'A';
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 10);
@@ -159,13 +164,45 @@ export default function Navbar() {
               )}
             </Link>
 
-            {/* Login */}
-            <Link
-              href="/dashboard"
-              className="hidden sm:flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-sm ml-1"
-            >
-              <User className="w-4 h-4" /> Login
-            </Link>
+            {/* Auth button */}
+            {!loading && (
+              user ? (
+                <div className="hidden sm:flex items-center gap-2 ml-1">
+                  <Link
+                    href="/dashboard"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold">
+                      {avatarLetter}
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">{displayName}</span>
+                  </Link>
+                  <button
+                    onClick={signOut}
+                    className="p-2 rounded-xl hover:bg-red-50 transition-colors"
+                    aria-label="Sign out"
+                    title="Sign out"
+                  >
+                    <LogOut className="w-4 h-4 text-gray-400 hover:text-red-500 transition-colors" />
+                  </button>
+                </div>
+              ) : (
+                <div className="hidden sm:flex items-center gap-2 ml-1">
+                  <Link
+                    href="/login"
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-green-700 transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/signup"
+                    className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-sm"
+                  >
+                    <User className="w-4 h-4" /> Sign Up
+                  </Link>
+                </div>
+              )
+            )}
 
             {/* Mobile menu toggle */}
             <button
@@ -209,9 +246,25 @@ export default function Navbar() {
                 <Link href="/dashboard?tab=orders" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
                   📦 My Orders
                 </Link>
-                <Link href="/dashboard" className="px-3 py-2.5 text-sm font-semibold text-green-700" onClick={() => setMobileOpen(false)}>
-                  👤 Login / Register
-                </Link>
+                {user ? (
+                  <>
+                    <Link href="/dashboard" className="px-3 py-2.5 text-sm font-semibold text-green-700" onClick={() => setMobileOpen(false)}>
+                      👤 {displayName}
+                    </Link>
+                    <button onClick={() => { signOut(); setMobileOpen(false); }} className="px-3 py-2.5 text-sm font-medium text-red-600 text-left">
+                      🚪 Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
+                      🔑 Sign In
+                    </Link>
+                    <Link href="/signup" className="px-3 py-2.5 text-sm font-semibold text-green-700" onClick={() => setMobileOpen(false)}>
+                      👤 Create Account
+                    </Link>
+                  </>
+                )}
               </div>
             </motion.div>
           )}

@@ -3,6 +3,7 @@ import "./globals.css";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { NotificationProvider } from "@/context/NotificationContext";
+import { AuthProvider } from "@/context/AuthContext";
 import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -38,16 +39,18 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <NotificationProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <AnnouncementBar />
-              <Navbar />
-              <main id="main-content">{children}</main>
-              <Footer />
-            </WishlistProvider>
-          </CartProvider>
-        </NotificationProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <AnnouncementBar />
+                <Navbar />
+                <main id="main-content">{children}</main>
+                <Footer />
+              </WishlistProvider>
+            </CartProvider>
+          </NotificationProvider>
+        </AuthProvider>
       </body>
     </html>
   );
