@@ -1,0 +1,16 @@
+{
+  "folders": [
+    {
+      "name": "Frontend (Next.js)",
+      "path": "."
+    },
+    {
+      "name": "Backend (Express/TS)",
+      "path": "backend"
+    }
+  ],
+  "settings": {
+    "typescript.tsdk": "node_modules/typescript/lib",
+    "typescript.enablePromptUseWorkspaceTsdk": true
+  }
+}
