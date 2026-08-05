@@ -1,6 +1,6 @@
 -- ================================================================
 -- GroceryMart — Production PostgreSQL Schema for Supabase
--- Version: 1.0.0 | Author: GroceryMart Team
+-- Version: 1.0.1 | Fix: value_positive constraint allows 0 for free_delivery coupons
 -- Run order: execute this entire file once against your Supabase DB
 -- ================================================================
 
@@ -55,19 +55,19 @@ CREATE INDEX idx_users_created_at ON users (created_at DESC);
 -- SECTION 3: ADDRESSES
 -- ----------------------------------------------------------------
 CREATE TABLE addresses (
-    id            UUID             PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id       UUID             NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    full_name     TEXT             NOT NULL,
-    phone         TEXT             NOT NULL,
-    address_line1 TEXT             NOT NULL,
+    id            UUID              PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id       UUID              NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    full_name     TEXT              NOT NULL,
+    phone         TEXT              NOT NULL,
+    address_line1 TEXT              NOT NULL,
     address_line2 TEXT,
-    city          TEXT             NOT NULL,
-    state         TEXT             NOT NULL,
-    pincode       TEXT             NOT NULL,
+    city          TEXT              NOT NULL,
+    state         TEXT              NOT NULL,
+    pincode       TEXT              NOT NULL,
     type          address_type_enum NOT NULL DEFAULT 'home',
-    is_default    BOOLEAN          NOT NULL DEFAULT FALSE,
-    created_at    TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
+    is_default    BOOLEAN           NOT NULL DEFAULT FALSE,
+    created_at    TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ       NOT NULL DEFAULT NOW(),
     CONSTRAINT pincode_format CHECK (pincode ~* '^[0-9]{6}$')
 );
 CREATE INDEX idx_addresses_user_id ON addresses (user_id);
@@ -78,18 +78,18 @@ CREATE INDEX idx_addresses_default ON addresses (user_id, is_default) WHERE is_d
 -- SECTION 4: CATEGORIES
 -- ----------------------------------------------------------------
 CREATE TABLE categories (
-    id              UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    name            TEXT        UNIQUE NOT NULL,
-    slug            TEXT        UNIQUE NOT NULL,
-    description     TEXT,
-    image_url       TEXT,
-    icon            TEXT,
-    color_gradient  TEXT,
-    sort_order      INTEGER     NOT NULL DEFAULT 0,
-    is_active       BOOLEAN     NOT NULL DEFAULT TRUE,
-    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    deleted_at      TIMESTAMPTZ
+    id             UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+    name           TEXT        UNIQUE NOT NULL,
+    slug           TEXT        UNIQUE NOT NULL,
+    description    TEXT,
+    image_url      TEXT,
+    icon           TEXT,
+    color_gradient TEXT,
+    sort_order     INTEGER     NOT NULL DEFAULT 0,
+    is_active      BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted_at     TIMESTAMPTZ
 );
 CREATE INDEX idx_categories_slug       ON categories (slug)       WHERE deleted_at IS NULL;
 CREATE INDEX idx_categories_is_active  ON categories (is_active)  WHERE deleted_at IS NULL;
@@ -122,7 +122,7 @@ CREATE INDEX idx_subcategories_slug        ON subcategories (slug)        WHERE 
 -- ----------------------------------------------------------------
 CREATE TABLE products (
     id               UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-    category_id      UUID        NOT NULL REFERENCES categories(id)    ON DELETE RESTRICT,
+    category_id      UUID        NOT NULL REFERENCES categories(id)   ON DELETE RESTRICT,
     subcategory_id   UUID                 REFERENCES subcategories(id) ON DELETE SET NULL,
     name             TEXT        NOT NULL,
     slug             TEXT        UNIQUE NOT NULL,
@@ -154,25 +154,25 @@ CREATE INDEX idx_products_fts ON products
 -- SECTION 7: PRODUCT VARIANTS
 -- ----------------------------------------------------------------
 CREATE TABLE product_variants (
-    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_id       UUID         NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    name             TEXT         NOT NULL,
+    id               UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_id       UUID          NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    name             TEXT          NOT NULL,
     weight           NUMERIC(10,3),
     unit             TEXT,
     price            NUMERIC(10,2) NOT NULL,
     original_price   NUMERIC(10,2) NOT NULL,
     discount_percent NUMERIC(5,2)  NOT NULL DEFAULT 0,
-    is_default       BOOLEAN      NOT NULL DEFAULT FALSE,
-    is_active        BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    is_default       BOOLEAN       NOT NULL DEFAULT FALSE,
+    is_active        BOOLEAN       NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     CONSTRAINT price_positive      CHECK (price > 0),
     CONSTRAINT original_price_gte  CHECK (original_price >= price),
     CONSTRAINT discount_range      CHECK (discount_percent BETWEEN 0 AND 100),
     CONSTRAINT unique_variant_name UNIQUE (product_id, name)
 );
 CREATE INDEX idx_variants_product_id ON product_variants (product_id);
-CREATE INDEX idx_variants_price      ON product_variants (price)  WHERE is_active = TRUE;
+CREATE INDEX idx_variants_price      ON product_variants (price)      WHERE is_active = TRUE;
 CREATE INDEX idx_variants_default    ON product_variants (product_id) WHERE is_default = TRUE;
 
 
@@ -180,15 +180,15 @@ CREATE INDEX idx_variants_default    ON product_variants (product_id) WHERE is_d
 -- SECTION 8: INVENTORY
 -- ----------------------------------------------------------------
 CREATE TABLE inventory (
-    id                  UUID                 PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_variant_id  UUID                 UNIQUE NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
-    quantity            INTEGER              NOT NULL DEFAULT 0,
-    reserved_quantity   INTEGER              NOT NULL DEFAULT 0,
-    low_stock_threshold INTEGER              NOT NULL DEFAULT 10,
+    id                  UUID                  PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_variant_id  UUID                  UNIQUE NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
+    quantity            INTEGER               NOT NULL DEFAULT 0,
+    reserved_quantity   INTEGER               NOT NULL DEFAULT 0,
+    low_stock_threshold INTEGER               NOT NULL DEFAULT 10,
     status              inventory_status_enum NOT NULL DEFAULT 'in_stock',
     last_restocked_at   TIMESTAMPTZ,
-    created_at          TIMESTAMPTZ          NOT NULL DEFAULT NOW(),
-    updated_at          TIMESTAMPTZ          NOT NULL DEFAULT NOW(),
+    created_at          TIMESTAMPTZ           NOT NULL DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ           NOT NULL DEFAULT NOW(),
     CONSTRAINT quantity_non_negative          CHECK (quantity >= 0),
     CONSTRAINT reserved_quantity_non_negative CHECK (reserved_quantity >= 0),
     CONSTRAINT reserved_lte_quantity          CHECK (reserved_quantity <= quantity)
@@ -217,13 +217,21 @@ CREATE TABLE coupons (
     is_active           BOOLEAN          NOT NULL DEFAULT TRUE,
     created_at          TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ      NOT NULL DEFAULT NOW(),
-    CONSTRAINT value_positive         CHECK (value > 0),
+
+    -- FIX: free_delivery coupons have value = 0 (no monetary discount)
+    --      percentage and fixed_amount coupons must have value > 0
+    CONSTRAINT value_valid            CHECK (
+        (type = 'free_delivery' AND value = 0)
+        OR
+        (type IN ('percentage', 'fixed_amount') AND value > 0)
+    ),
     CONSTRAINT min_order_non_negative CHECK (min_order_amount >= 0),
     CONSTRAINT valid_period           CHECK (valid_until > valid_from),
-    CONSTRAINT code_uppercase         CHECK (code = UPPER(code))
+    CONSTRAINT code_uppercase         CHECK (code = UPPER(code)),
+    CONSTRAINT percentage_range       CHECK (type != 'percentage' OR value <= 100)
 );
-CREATE INDEX idx_coupons_code        ON coupons (code)       WHERE is_active = TRUE;
-CREATE INDEX idx_coupons_valid_until ON coupons (valid_until) WHERE is_active = TRUE;
+CREATE INDEX idx_coupons_code        ON coupons (code)        WHERE is_active = TRUE;
+CREATE INDEX idx_coupons_valid_until ON coupons (valid_until)  WHERE is_active = TRUE;
 
 
 -- ----------------------------------------------------------------
@@ -311,9 +319,9 @@ CREATE TABLE orders (
     id                    UUID               PRIMARY KEY DEFAULT gen_random_uuid(),
     order_number          TEXT               UNIQUE NOT NULL
                             DEFAULT 'GM' || TO_CHAR(NOW(), 'YYYYMMDD') || LPAD(FLOOR(RANDOM()*100000)::TEXT, 5, '0'),
-    user_id               UUID               NOT NULL REFERENCES users(id)     ON DELETE RESTRICT,
-    address_id            UUID               REFERENCES addresses(id)          ON DELETE SET NULL,
-    coupon_id             UUID               REFERENCES coupons(id)            ON DELETE SET NULL,
+    user_id               UUID               NOT NULL REFERENCES users(id)  ON DELETE RESTRICT,
+    address_id            UUID               REFERENCES addresses(id)        ON DELETE SET NULL,
+    coupon_id             UUID               REFERENCES coupons(id)          ON DELETE SET NULL,
     status                order_status_enum  NOT NULL DEFAULT 'pending',
     delivery_type         delivery_type_enum NOT NULL DEFAULT 'door_delivery',
     delivery_slot         TEXT,
@@ -345,12 +353,12 @@ CREATE INDEX idx_orders_order_num ON orders (order_number);
 -- SECTION 16: COUPON USAGE
 -- ----------------------------------------------------------------
 CREATE TABLE coupon_usage (
-    id               UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    coupon_id        UUID         NOT NULL REFERENCES coupons(id) ON DELETE RESTRICT,
-    user_id          UUID         NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
-    order_id         UUID         NOT NULL REFERENCES orders(id)  ON DELETE RESTRICT,
+    id               UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    coupon_id        UUID          NOT NULL REFERENCES coupons(id) ON DELETE RESTRICT,
+    user_id          UUID          NOT NULL REFERENCES users(id)   ON DELETE CASCADE,
+    order_id         UUID          NOT NULL REFERENCES orders(id)  ON DELETE RESTRICT,
     discount_applied NUMERIC(10,2) NOT NULL,
-    used_at          TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    used_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     CONSTRAINT unique_coupon_order UNIQUE (coupon_id, order_id)
 );
 CREATE INDEX idx_coupon_usage_coupon_id ON coupon_usage (coupon_id);
@@ -361,15 +369,15 @@ CREATE INDEX idx_coupon_usage_user_id   ON coupon_usage (user_id);
 -- SECTION 17: ORDER ITEMS
 -- ----------------------------------------------------------------
 CREATE TABLE order_items (
-    id                 UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id           UUID         NOT NULL REFERENCES orders(id)          ON DELETE CASCADE,
-    product_variant_id UUID         NOT NULL REFERENCES product_variants(id) ON DELETE RESTRICT,
-    product_name       TEXT         NOT NULL,
-    variant_name       TEXT         NOT NULL,
-    quantity           INTEGER      NOT NULL,
+    id                 UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id           UUID          NOT NULL REFERENCES orders(id)           ON DELETE CASCADE,
+    product_variant_id UUID          NOT NULL REFERENCES product_variants(id)  ON DELETE RESTRICT,
+    product_name       TEXT          NOT NULL,
+    variant_name       TEXT          NOT NULL,
+    quantity           INTEGER       NOT NULL,
     unit_price         NUMERIC(10,2) NOT NULL,
     total_price        NUMERIC(10,2) NOT NULL GENERATED ALWAYS AS (quantity * unit_price) STORED,
-    created_at         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    created_at         TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     CONSTRAINT quantity_min   CHECK (quantity >= 1),
     CONSTRAINT unit_price_pos CHECK (unit_price > 0)
 );
@@ -409,9 +417,9 @@ CREATE TABLE payments (
     updated_at       TIMESTAMPTZ         NOT NULL DEFAULT NOW(),
     CONSTRAINT amount_positive CHECK (amount > 0)
 );
-CREATE INDEX idx_payments_order_id       ON payments (order_id);
-CREATE INDEX idx_payments_status         ON payments (status);
-CREATE INDEX idx_payments_transaction_id ON payments (transaction_id) WHERE transaction_id IS NOT NULL;
+CREATE INDEX idx_payments_order_id        ON payments (order_id);
+CREATE INDEX idx_payments_status          ON payments (status);
+CREATE INDEX idx_payments_transaction_id  ON payments (transaction_id) WHERE transaction_id IS NOT NULL;
 
 
 -- ----------------------------------------------------------------
@@ -421,7 +429,7 @@ CREATE TABLE reviews (
     id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id           UUID        NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     user_id              UUID        NOT NULL REFERENCES users(id)    ON DELETE CASCADE,
-    order_id             UUID                 REFERENCES orders(id)  ON DELETE SET NULL,
+    order_id             UUID                 REFERENCES orders(id)   ON DELETE SET NULL,
     rating               INTEGER     NOT NULL,
     comment              TEXT,
     is_verified_purchase BOOLEAN     NOT NULL DEFAULT FALSE,
@@ -458,7 +466,7 @@ CREATE INDEX idx_notifications_created ON notifications (created_at DESC);
 
 
 -- ----------------------------------------------------------------
--- SECTION 22: ADMIN NOTIFICATIONS (Order alerts for admin)
+-- SECTION 22: ADMIN NOTIFICATIONS
 -- ----------------------------------------------------------------
 CREATE TABLE admin_notifications (
     id             UUID                PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -503,7 +511,7 @@ CREATE INDEX idx_audit_logs_created_at ON audit_logs (created_at DESC);
 -- SECTION 24: TRIGGERS
 -- ================================================================
 
--- auto set updated_at
+-- Auto set updated_at on every UPDATE
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$;
@@ -524,7 +532,7 @@ BEGIN
 END; $$;
 
 
--- auto update inventory status
+-- Auto update inventory status based on quantity
 CREATE OR REPLACE FUNCTION update_inventory_status()
 RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN
@@ -574,9 +582,9 @@ SELECT
     pay.method  AS payment_method, pay.status AS payment_status,
     a.city AS delivery_city, a.pincode AS delivery_pincode
 FROM orders o
-JOIN users u          ON u.id   = o.user_id
+JOIN users u           ON u.id   = o.user_id
 LEFT JOIN payments pay ON pay.order_id = o.id
-LEFT JOIN addresses a  ON a.id  = o.address_id
+LEFT JOIN addresses a  ON a.id   = o.address_id
 WHERE o.deleted_at IS NULL;
 
 
@@ -584,20 +592,20 @@ WHERE o.deleted_at IS NULL;
 -- SECTION 26: ROW LEVEL SECURITY (Supabase)
 -- ================================================================
 
-ALTER TABLE users              ENABLE ROW LEVEL SECURITY;
-ALTER TABLE addresses          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cart               ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cart_items         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE wishlist           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE orders             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE order_items        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications      ENABLE ROW LEVEL SECURITY;
-ALTER TABLE reviews            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE products           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE product_variants   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE categories         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE addresses        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cart             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cart_items       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE wishlist         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_items      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE products         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE product_variants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories       ENABLE ROW LEVEL SECURITY;
 
--- User data policies
+-- Users can only see/modify their own data
 CREATE POLICY "own_profile"       ON users       FOR ALL USING (auth.uid() = id);
 CREATE POLICY "own_addresses"     ON addresses   FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "own_cart"          ON cart        FOR ALL USING (auth.uid() = user_id);
@@ -610,13 +618,13 @@ CREATE POLICY "own_order_items"   ON order_items FOR ALL
 CREATE POLICY "own_notifications" ON notifications FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "own_reviews"       ON reviews     FOR ALL USING (auth.uid() = user_id);
 
--- Public read
+-- Products & categories are publicly readable
 CREATE POLICY "products_public"   ON products         FOR SELECT USING (is_active = TRUE AND deleted_at IS NULL);
 CREATE POLICY "variants_public"   ON product_variants FOR SELECT USING (is_active = TRUE);
 CREATE POLICY "categories_public" ON categories       FOR SELECT USING (is_active = TRUE AND deleted_at IS NULL);
 
--- Admin override
-CREATE POLICY "admin_orders"      ON orders FOR ALL USING (
+-- Admins can access all orders
+CREATE POLICY "admin_orders" ON orders FOR ALL USING (
     EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('admin','super_admin'))
 );
 
@@ -626,20 +634,21 @@ CREATE POLICY "admin_orders"      ON orders FOR ALL USING (
 -- ================================================================
 
 INSERT INTO categories (name, slug, description, icon, color_gradient, sort_order) VALUES
-('Groceries',           'groceries',            'Staples, pulses, oils, and everyday essentials', '🛒', 'from-green-400 to-green-600',  1),
-('Vijaya Milk Products','vijaya-milk-products', 'Fresh milk, butter, paneer, curd, and more',     '🥛', 'from-blue-400 to-blue-600',    2),
-('Snacks',              'snacks',               'Chips, namkeen, biscuits, and munchies',          '🍟', 'from-yellow-400 to-orange-500', 3),
-('Cool Drinks',         'cool-drinks',          'Soft drinks, juices, energy drinks, and water',   '🥤', 'from-cyan-400 to-blue-500',    4),
-('Fruits & Vegetables', 'fruits-vegetables',    'Fresh farm produce delivered daily',              '🥦', 'from-lime-400 to-green-500',   5),
-('Personal Care',       'personal-care',        'Soaps, shampoos, skincare, and hygiene',          '🧴', 'from-pink-400 to-rose-500',    6);
+('Groceries',           'groceries',           'Staples, pulses, oils, and everyday essentials', '🛒', 'from-green-400 to-green-600',   1),
+('Vijaya Milk Products','vijaya-milk-products','Fresh milk, butter, paneer, curd, and more',      '🥛', 'from-blue-400 to-blue-600',     2),
+('Snacks',              'snacks',              'Chips, namkeen, biscuits, and munchies',           '🍟', 'from-yellow-400 to-orange-500', 3),
+('Cool Drinks',         'cool-drinks',         'Soft drinks, juices, energy drinks, and water',    '🥤', 'from-cyan-400 to-blue-500',     4),
+('Fruits & Vegetables', 'fruits-vegetables',   'Fresh farm produce delivered daily',               '🥦', 'from-lime-400 to-green-500',    5),
+('Personal Care',       'personal-care',       'Soaps, shampoos, skincare, and hygiene',           '🧴', 'from-pink-400 to-rose-500',     6);
 
+-- Coupons — note FREEDEL uses value = 0 (allowed for free_delivery type)
 INSERT INTO coupons (code, description, type, value, min_order_amount, max_discount_amount, total_usage_limit, per_user_limit, valid_until) VALUES
-('FRESH10',   '10% off on all groceries',       'percentage',   10, 0,   200,  1000, 1, NOW() + INTERVAL '90 days'),
-('SAVE15',    '15% off on orders above ₹500',   'percentage',   15, 500, 300,  500,  1, NOW() + INTERVAL '60 days'),
-('NEWUSER20', '20% off on first order',         'percentage',   20, 0,   400,  NULL, 1, NOW() + INTERVAL '30 days'),
-('VIJAYA5',   '5% off on Vijaya Milk Products', 'percentage',    5, 0,   100,  300,  2, NOW() + INTERVAL '120 days'),
-('FREEDEL',   'Free delivery on any order',     'free_delivery', 0, 0,   NULL, 200,  1, NOW() + INTERVAL '45 days');
+('FRESH10',   '10% off on all groceries',       'percentage',    10, 0,   200, 1000, 1, NOW() + INTERVAL '90 days'),
+('SAVE15',    '15% off on orders above 500',    'percentage',    15, 500, 300,  500, 1, NOW() + INTERVAL '60 days'),
+('NEWUSER20', '20% off on first order',         'percentage',    20, 0,   400, NULL, 1, NOW() + INTERVAL '30 days'),
+('VIJAYA5',   '5% off on Vijaya Milk Products', 'percentage',     5, 0,   100,  300, 2, NOW() + INTERVAL '120 days'),
+('FREEDEL',   'Free delivery on any order',     'free_delivery',  0, 0,  NULL,  200, 1, NOW() + INTERVAL '45 days');
 
--- Admin user (password hash handled by Supabase Auth)
+-- Admin user (password handled by Supabase Auth)
 INSERT INTO users (email, phone, full_name, role, is_verified) VALUES
 ('admin@grocerymart.in', '+919000000001', 'GroceryMart Admin', 'super_admin', TRUE);
