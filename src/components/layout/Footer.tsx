@@ -119,7 +119,7 @@ export default function Footer() {
               <Mail className="w-3.5 h-3.5" /> support@vijayalakshmistore.in
             </a>
             <span className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5" /> Penamaluru Center, Opp to SBI
+              <MapPin className="w-3.5 h-3.5" /> 12-17, D K R Complex, Penamaluru, opp. Canara Bank, AP 521137
             </span>
           </div>
           <p className="text-xs text-gray-500">
