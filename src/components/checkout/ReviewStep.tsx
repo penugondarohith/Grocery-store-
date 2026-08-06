@@ -9,6 +9,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { formatPrice } from '@/lib/utils';
 import { createOrder, generateOrderNumber } from '@/services/orderService';
+import { sendOrderWhatsApp } from '@/services/whatsappService';
 import { Order, OrderItem } from '@/types/checkout';
 import { useRouter } from 'next/navigation';
 
@@ -84,6 +85,19 @@ export default function ReviewStep() {
         // Guest: generate local order
         createdOrder = { ...orderPayload, id: `guest-${Date.now()}`, order_number: orderNumber };
       }
+
+      // ── WhatsApp alerts (customer + owner) ─────────────
+      const addrStr = `${selectedAddress.address_line}, ${selectedAddress.city}, ${selectedAddress.state} — ${selectedAddress.pincode}`;
+      sendOrderWhatsApp({
+        customerPhone: selectedAddress.phone,
+        customerName: selectedAddress.name,
+        orderId: createdOrder.order_number,
+        items: orderItems.map((i) => ({ name: i.name, quantity: i.quantity, total: i.total })),
+        total: finalTotal,
+        paymentMethod,
+        deliverySlot: deliverySlot ? deliverySlot.label : undefined,
+        address: addrStr,
+      });
 
       // Notify admin
       addOrderNotification({
