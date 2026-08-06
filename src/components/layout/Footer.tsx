@@ -63,12 +63,13 @@ export default function Footer() {
               <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center">
                 <Leaf className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">
-                Grocery<span className="text-green-400">Mart</span>
+              <span className="text-lg font-bold text-white leading-tight">
+                Vijaya Lakshmi<span className="text-green-400"> General Stores</span>
               </span>
             </Link>
+            <p className="text-xs text-gray-400 mb-1">Prop: <span className="text-green-400 font-medium">Lakshmi Narayana</span></p>
             <p className="text-sm text-gray-400 mb-5 leading-relaxed">
-              Fresh groceries delivered to your door in 30 minutes. Quality products, unbeatable prices.
+              Fresh groceries delivered to your door. Quality products, unbeatable prices.
             </p>
             <div className="flex gap-3">
               {[

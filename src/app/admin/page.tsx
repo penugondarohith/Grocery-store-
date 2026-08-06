@@ -534,6 +534,7 @@ export default function AdminPage() {
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-5">
               {[
                 { label: "Store Name", val: "Vijaya Lakshmi General Stores" },
+                { label: "Proprietor", val: "Lakshmi Narayana" },
                 { label: "Support Email", val: "support@Vijaya Lakshmi General Stores.in" },
                 { label: "Phone", val: "1800-123-4567" },
                 { label: "Min Order for Free Delivery", val: "₹500" },
