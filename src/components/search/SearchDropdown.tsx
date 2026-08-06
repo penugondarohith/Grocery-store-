@@ -1,10 +1,8 @@
 'use client';
 
-import { useRef, useEffect, KeyboardEvent, Fragment } from 'react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, X, TrendingUp, Tag, Package, ChevronRight } from 'lucide-react';
+import { useRef, useEffect, Fragment } from 'react';
+import { motion } from 'framer-motion';
+import { Clock, X, TrendingUp, Tag, Package, ChevronRight, Sparkles } from 'lucide-react';
 import { SearchResult, highlightText } from '@/services/searchService';
 import { formatPrice } from '@/lib/utils';
 
@@ -20,10 +18,11 @@ interface Props {
 
 function HighlightedText({ text, query }: { text: string; query: string }) {
   const parts = highlightText(text, query).split('|||');
+  const q = query.toLowerCase().trim();
   return (
     <span>
       {parts.map((part, i) =>
-        part.toLowerCase() === query.toLowerCase().trim() ? (
+        part.toLowerCase() === q ? (
           <mark key={i} className="bg-green-100 text-green-800 rounded-sm px-0.5 not-italic font-semibold">
             {part}
           </mark>
@@ -40,7 +39,6 @@ export default function SearchDropdown({
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
@@ -51,7 +49,7 @@ export default function SearchDropdown({
 
   const hasResults = results && results.total > 0;
   const showRecent = !query.trim() && recentSearches.length > 0;
-  const showNoResults = query.trim().length >= 2 && !loading && results && results.total === 0;
+  const showNoResults = query.trim().length >= 2 && !loading && results && !results.hasExactMatches;
 
   return (
     <motion.div
@@ -60,11 +58,11 @@ export default function SearchDropdown({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -8, scale: 0.98 }}
       transition={{ duration: 0.15 }}
-      className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden max-h-[520px] overflow-y-auto"
+      className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden max-h-[540px] overflow-y-auto"
     >
-      {/* Loading */}
+      {/* ── Loading skeletons ── */}
       {loading && (
-        <div className="px-5 py-4 space-y-3">
+        <div className="px-4 py-4 space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex gap-3 items-center animate-pulse">
               <div className="w-12 h-12 rounded-xl bg-gray-100 shrink-0" />
@@ -77,12 +75,12 @@ export default function SearchDropdown({
         </div>
       )}
 
-      {/* Recent searches */}
+      {/* ── Recent searches ── */}
       {!loading && showRecent && (
         <div className="p-3">
           <div className="flex items-center justify-between px-2 mb-2">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" /> Recent
+              <Clock className="w-3.5 h-3.5" /> Recent Searches
             </span>
             <button onClick={onClearRecent} className="text-xs text-red-400 hover:text-red-600 font-medium transition-colors">
               Clear all
@@ -94,15 +92,15 @@ export default function SearchDropdown({
               onClick={() => onSelect(s)}
               className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors text-left group"
             >
-              <Clock className="w-4 h-4 text-gray-300 group-hover:text-gray-400" />
-              <span className="text-sm text-gray-700">{s}</span>
-              <ChevronRight className="w-3.5 h-3.5 text-gray-300 ml-auto opacity-0 group-hover:opacity-100" />
+              <Clock className="w-4 h-4 text-gray-300 group-hover:text-gray-400 shrink-0" />
+              <span className="text-sm text-gray-700 flex-1">{s}</span>
+              <ChevronRight className="w-3.5 h-3.5 text-gray-300 opacity-0 group-hover:opacity-100" />
             </button>
           ))}
         </div>
       )}
 
-      {/* Results */}
+      {/* ── Exact match results ── */}
       {!loading && hasResults && (
         <div className="p-3 space-y-1">
           {/* Products */}
@@ -184,7 +182,7 @@ export default function SearchDropdown({
             </div>
           )}
 
-          {/* View all results */}
+          {/* View all */}
           <div className="border-t border-gray-100 pt-2 mt-2">
             <button
               onClick={() => onSelect(query)}
@@ -196,19 +194,44 @@ export default function SearchDropdown({
         </div>
       )}
 
-      {/* No results */}
+      {/* ── No results: show related ── */}
       {!loading && showNoResults && (
-        <div className="py-10 text-center px-4">
-          <p className="text-3xl mb-2">🔍</p>
-          <p className="text-sm font-semibold text-gray-700">No results for &ldquo;{query}&rdquo;</p>
-          <p className="text-xs text-gray-400 mt-1">Try different keywords or browse categories</p>
-        </div>
-      )}
+        <div className="p-3">
+          {/* No match message */}
+          <div className="py-4 text-center">
+            <p className="text-2xl mb-1">🔍</p>
+            <p className="text-sm font-semibold text-gray-700">
+              No results for &ldquo;{query}&rdquo;
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">Showing you popular alternatives</p>
+          </div>
 
-      {/* Prompt to type more */}
-      {!loading && !hasResults && !showRecent && !showNoResults && query.trim().length > 0 && query.trim().length < 2 && (
-        <div className="py-6 text-center">
-          <p className="text-xs text-gray-400">Type at least 2 characters to search…</p>
+          {/* Related / popular products */}
+          {results.relatedProducts.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-2 mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" /> You might like
+              </p>
+              {results.relatedProducts.slice(0, 4).map((product) => (
+                <button
+                  key={product.id}
+                  onClick={() => onSelect(product.name, `/product/${product.id}`)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-amber-50 transition-colors group text-left"
+                >
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-11 h-11 rounded-xl object-cover shrink-0 border border-gray-100"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{product.name}</p>
+                    <p className="text-xs text-gray-400">{product.brand} · {product.weight}</p>
+                  </div>
+                  <span className="text-sm font-bold text-green-700 shrink-0">{formatPrice(product.price)}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </motion.div>

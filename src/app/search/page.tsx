@@ -4,12 +4,10 @@ import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { Search, SlidersHorizontal } from 'lucide-react';
+import { Search, Sparkles } from 'lucide-react';
 import ProductCard from '@/components/ui/ProductCard';
 import SkeletonCard from '@/components/ui/SkeletonCard';
 import { search, SearchResult } from '@/services/searchService';
-import { products } from '@/data/products';
-import { formatPrice } from '@/lib/utils';
 
 const SORT_OPTIONS = [
   { value: 'relevance', label: 'Relevance' },
@@ -17,7 +15,6 @@ const SORT_OPTIONS = [
   { value: 'price_desc', label: 'Price: High → Low' },
   { value: 'rating', label: 'Top Rated' },
   { value: 'discount', label: 'Best Discount' },
-  { value: 'newest', label: 'Newest' },
 ];
 
 function SearchResultsInner() {
@@ -51,19 +48,22 @@ function SearchResultsInner() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
+        <Link href="/" className="hover:text-green-600 transition-colors">Home</Link>
+        <span>›</span>
+        <span className="text-gray-900 font-medium">Search</span>
+        {q && <><span>›</span><span className="text-gray-500">{q}</span></>}
+      </div>
+
       {/* Header */}
       <div className="mb-6">
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-          <Link href="/" className="hover:text-green-600 transition-colors">Home</Link>
-          <span>›</span>
-          <span className="text-gray-900 font-medium">Search</span>
-        </div>
         {q ? (
           <h1 className="text-2xl font-bold text-gray-900">
             Results for &ldquo;<span className="text-green-600">{q}</span>&rdquo;
-            {!loading && results && (
+            {!loading && results && results.hasExactMatches && (
               <span className="text-base font-normal text-gray-400 ml-2">
-                {results.total} results
+                {sortedProducts.length} products found
               </span>
             )}
           </h1>
@@ -83,15 +83,15 @@ function SearchResultsInner() {
         </div>
       )}
 
-      {/* Loading skeletons */}
+      {/* Loading */}
       {loading && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
           {Array.from({ length: 10 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       )}
 
-      {/* Results */}
-      {!loading && results && q && (
+      {/* ── Exact match results ── */}
+      {!loading && results && q && results.hasExactMatches && (
         <>
           {/* Category + Brand chips */}
           {(results.categories.length > 0 || results.brands.length > 0) && (
@@ -114,10 +114,7 @@ function SearchResultsInner() {
                 <div className="flex flex-wrap gap-2 items-center">
                   <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Brands:</span>
                   {results.brands.map((b) => (
-                    <span
-                      key={b.name}
-                      className="px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-sm font-medium text-blue-700"
-                    >
+                    <span key={b.name} className="px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-full text-sm font-medium text-blue-700">
                       {b.name}
                     </span>
                   ))}
@@ -126,7 +123,7 @@ function SearchResultsInner() {
             </div>
           )}
 
-          {/* Sort + count bar */}
+          {/* Sort bar */}
           {sortedProducts.length > 0 && (
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm text-gray-500">
@@ -144,42 +141,61 @@ function SearchResultsInner() {
             </div>
           )}
 
-          {/* Product Grid */}
-          {sortedProducts.length > 0 ? (
-            <motion.div
-              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              {sortedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </motion.div>
-          ) : (
-            <div className="text-center py-20">
-              <div className="text-6xl mb-4">🔍</div>
-              <h2 className="text-xl font-bold text-gray-800 mb-2">
-                No products found for &ldquo;{q}&rdquo;
+          {/* Product grid */}
+          <motion.div
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
+          >
+            {sortedProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </motion.div>
+        </>
+      )}
+
+      {/* ── No exact results: show "related" ── */}
+      {!loading && results && q && !results.hasExactMatches && (
+        <>
+          {/* No results banner */}
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-8 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+            <div className="text-5xl">🔍</div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-800">
+                No exact matches for &ldquo;{q}&rdquo;
               </h2>
-              <p className="text-gray-500 text-sm mb-6">
-                Try checking the spelling or use more general terms
+              <p className="text-sm text-gray-500 mt-1">
+                We couldn&apos;t find what you searched for. Check spelling or try different keywords.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link
-                  href="/"
-                  className="px-6 py-3 bg-green-600 text-white font-semibold rounded-2xl hover:bg-green-700 transition-colors"
-                >
-                  Browse All Products
+              <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
+                <Link href="/" className="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-xl hover:bg-green-700 transition-colors">
+                  Browse All
                 </Link>
-                <Link
-                  href="/category/groceries"
-                  className="px-6 py-3 border border-gray-200 text-gray-700 font-semibold rounded-2xl hover:bg-gray-50 transition-colors"
-                >
-                  Shop Groceries
+                <Link href="/category/groceries" className="px-4 py-2 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors">
+                  Groceries
+                </Link>
+                <Link href="/category/snacks" className="px-4 py-2 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors">
+                  Snacks
                 </Link>
               </div>
             </div>
+          </div>
+
+          {/* Related / popular products */}
+          {results.relatedProducts.length > 0 && (
+            <>
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <h2 className="text-lg font-bold text-gray-900">You might also like</h2>
+              </div>
+              <motion.div
+                className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}
+              >
+                {results.relatedProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </motion.div>
+            </>
           )}
         </>
       )}
