@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { useAuthContext } from '@/context/AuthContext';
+import { createClient } from '@/lib/supabase/client';
 
 const fadeUp = {
   hidden: { opacity: 0, y: 20 },
@@ -15,25 +16,13 @@ const stagger = {
   show: { transition: { staggerChildren: 0.08 } },
 };
 
+/* ─── Stat Card ─── */
 function StatCard({
-  emoji,
-  label,
-  value,
-  color,
-}: {
-  emoji: string;
-  label: string;
-  value: string;
-  color: string;
-}) {
+  emoji, label, value, color,
+}: { emoji: string; label: string; value: string; color: string }) {
   return (
-    <motion.div
-      variants={fadeUp}
-      className={`rounded-2xl p-5 border ${color} flex items-center gap-4`}
-    >
-      <div className="w-12 h-12 rounded-xl bg-white/60 flex items-center justify-center text-2xl shadow-sm">
-        {emoji}
-      </div>
+    <motion.div variants={fadeUp} className={`rounded-2xl p-5 border ${color} flex items-center gap-4`}>
+      <div className="w-12 h-12 rounded-xl bg-white/60 flex items-center justify-center text-2xl shadow-sm">{emoji}</div>
       <div>
         <p className="text-2xl font-bold text-gray-900">{value}</p>
         <p className="text-sm text-gray-500">{label}</p>
@@ -42,53 +31,332 @@ function StatCard({
   );
 }
 
-function QuickAction({
-  href,
-  emoji,
-  title,
-  desc,
-}: {
-  href: string;
-  emoji: string;
-  title: string;
-  desc: string;
-}) {
+/* ─── Quick Action ─── */
+function QuickAction({ href, emoji, title, desc }: { href: string; emoji: string; title: string; desc: string }) {
   return (
     <motion.div variants={fadeUp}>
-      <Link
-        href={href}
-        className="group flex items-center gap-4 p-4 rounded-2xl border border-gray-100 bg-white hover:border-green-300 hover:bg-green-50/50 transition-all duration-200 shadow-sm hover:shadow-md"
-      >
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
-          {emoji}
-        </div>
+      <Link href={href} className="group flex items-center gap-4 p-4 rounded-2xl border border-gray-100 bg-white hover:border-green-300 hover:bg-green-50/50 transition-all duration-200 shadow-sm hover:shadow-md">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">{emoji}</div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900">{title}</p>
           <p className="text-xs text-gray-500 truncate">{desc}</p>
         </div>
-        <svg
-          className="w-4 h-4 text-gray-300 group-hover:text-green-500 group-hover:translate-x-1 transition-all"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fillRule="evenodd"
-            d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-            clipRule="evenodd"
-          />
+        <svg className="w-4 h-4 text-gray-300 group-hover:text-green-500 group-hover:translate-x-1 transition-all" viewBox="0 0 20 20" fill="currentColor">
+          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
         </svg>
       </Link>
     </motion.div>
   );
 }
 
+/* ─── Modal Wrapper ─── */
+function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40"
+          />
+          <motion.div
+            key="modal"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-3xl shadow-2xl z-50 p-6 sm:p-8"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors text-gray-500 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+            {children}
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+}
+
+/* ─── Edit Profile Modal ─── */
+function EditProfileModal({
+  open, onClose, currentName, currentPhone, onSaved,
+}: {
+  open: boolean;
+  onClose: () => void;
+  currentName: string;
+  currentPhone: string;
+  onSaved: (name: string, phone: string) => void;
+}) {
+  const supabase = createClient();
+  const [fullName, setFullName] = useState(currentName);
+  const [phone, setPhone] = useState(currentPhone === 'Not set' ? '' : currentPhone);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setFullName(currentName);
+      setPhone(currentPhone === 'Not set' ? '' : currentPhone);
+      setError(null);
+      setSuccess(false);
+    }
+  }, [open, currentName, currentPhone]);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim()) { setError('Full name is required.'); return; }
+    setLoading(true);
+    setError(null);
+    const { error: err } = await supabase.auth.updateUser({
+      data: { full_name: fullName.trim(), phone: phone.trim() || null },
+    });
+    setLoading(false);
+    if (err) { setError(err.message); return; }
+    setSuccess(true);
+    onSaved(fullName.trim(), phone.trim() || 'Not set');
+    setTimeout(() => { setSuccess(false); onClose(); }, 1200);
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Edit Profile ✏️">
+      <form onSubmit={handleSave} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+          <input
+            value={fullName}
+            onChange={e => setFullName(e.target.value)}
+            type="text"
+            placeholder="Your full name"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
+          <div className="flex gap-2">
+            <span className="px-3 py-3 rounded-xl border border-gray-200 bg-gray-100 text-sm text-gray-500 font-medium flex items-center shrink-0">
+              🇮🇳 +91
+            </span>
+            <input
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              type="tel"
+              placeholder="9876543210"
+              className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-2.5"
+            >
+              ⚠️ {error}
+            </motion.p>
+          )}
+          {success && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-green-700 bg-green-50 rounded-xl px-4 py-2.5"
+            >
+              ✅ Profile updated successfully!
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button" onClick={onClose}
+            className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit" disabled={loading}
+            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-semibold hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-60 shadow-md shadow-green-200"
+          >
+            {loading ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ─── Change Password Modal ─── */
+function ChangePasswordModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const supabase = createClient();
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setNewPassword('');
+      setConfirmPassword('');
+      setError(null);
+      setSuccess(false);
+      setShowNew(false);
+      setShowConfirm(false);
+    }
+  }, [open]);
+
+  const strength = (() => {
+    const checks = [
+      newPassword.length >= 8,
+      /[A-Z]/.test(newPassword),
+      /[0-9]/.test(newPassword),
+      /[^A-Za-z0-9]/.test(newPassword),
+    ];
+    return checks.filter(Boolean).length;
+  })();
+  const strengthColors = ['bg-gray-200', 'bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-500'];
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (newPassword !== confirmPassword) { setError('Passwords do not match.'); return; }
+    setLoading(true);
+    setError(null);
+    const { error: err } = await supabase.auth.updateUser({ password: newPassword });
+    setLoading(false);
+    if (err) { setError(err.message); return; }
+    setSuccess(true);
+    setTimeout(() => { setSuccess(false); onClose(); }, 1400);
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Change Password 🔒">
+      <form onSubmit={handleSave} className="space-y-4">
+        {/* New Password */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+          <div className="relative">
+            <input
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              type={showNew ? 'text' : 'password'}
+              placeholder="Create a strong password"
+              className="w-full px-4 py-3 pr-11 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all"
+            />
+            <button
+              type="button"
+              onClick={() => setShowNew(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors text-lg"
+            >
+              {showNew ? '🙈' : '👁️'}
+            </button>
+          </div>
+          {/* Strength bar */}
+          {newPassword && (
+            <div className="mt-2 flex gap-1">
+              {[0, 1, 2, 3].map(i => (
+                <div
+                  key={i}
+                  className={`h-1 flex-1 rounded-full transition-all duration-300 ${i < strength ? strengthColors[strength] : 'bg-gray-200'}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Confirm Password */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm New Password</label>
+          <div className="relative">
+            <input
+              value={confirmPassword}
+              onChange={e => setConfirmPassword(e.target.value)}
+              type={showConfirm ? 'text' : 'password'}
+              placeholder="Repeat your new password"
+              className="w-full px-4 py-3 pr-11 rounded-xl border border-gray-200 text-sm bg-gray-50 focus:bg-white focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm(v => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors text-lg"
+            >
+              {showConfirm ? '🙈' : '👁️'}
+            </button>
+          </div>
+        </div>
+
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-2.5"
+            >
+              ⚠️ {error}
+            </motion.p>
+          )}
+          {success && (
+            <motion.p
+              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              className="text-sm text-green-700 bg-green-50 rounded-xl px-4 py-2.5"
+            >
+              ✅ Password changed successfully!
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        <div className="flex gap-3 pt-2">
+          <button
+            type="button" onClick={onClose}
+            className="flex-1 py-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit" disabled={loading}
+            className="flex-1 py-3 rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 text-white text-sm font-semibold hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-60 shadow-md shadow-green-200"
+          >
+            {loading ? 'Updating…' : 'Update Password'}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/* ─── Main Dashboard ─── */
 export default function CustomerDashboard() {
   const router = useRouter();
   const { user, loading, signOut } = useAuthContext();
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+
+  // Local state so profile updates reflect instantly without page reload
+  const [profileName, setProfileName] = useState('');
+  const [profilePhone, setProfilePhone] = useState('');
 
   useEffect(() => {
     if (!loading && !user) router.push('/login');
   }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user) {
+      setProfileName(user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'Customer');
+      setProfilePhone(user.user_metadata?.phone ?? 'Not set');
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -103,8 +371,7 @@ export default function CustomerDashboard() {
 
   if (!user) return null;
 
-  const fullName = user.user_metadata?.full_name ?? user.email?.split('@')[0] ?? 'Customer';
-  const avatarLetter = fullName[0]?.toUpperCase() ?? 'G';
+  const avatarLetter = profileName[0]?.toUpperCase() ?? 'G';
   const joinDate = new Date(user.created_at).toLocaleDateString('en-IN', {
     month: 'long',
     year: 'numeric',
@@ -152,7 +419,6 @@ export default function CustomerDashboard() {
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="rounded-3xl bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 p-6 sm:p-8 mb-8 text-white shadow-xl shadow-green-200 relative overflow-hidden"
         >
-          {/* Decorative circles */}
           <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full bg-white/10" />
           <div className="absolute right-16 -bottom-6 w-24 h-24 rounded-full bg-white/5" />
 
@@ -160,18 +426,22 @@ export default function CustomerDashboard() {
             <div>
               <p className="text-green-100 text-sm font-medium mb-1">Welcome back 👋</p>
               <h1 className="text-2xl sm:text-3xl font-bold mb-2">
-                Hello, {fullName.split(' ')[0]}!
+                Hello, {profileName.split(' ')[0]}!
               </h1>
               <p className="text-green-100 text-sm">
                 Member since {joinDate} · {user.email}
               </p>
             </div>
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl sm:text-3xl font-bold border-2 border-white/30 shrink-0">
+            {/* Avatar — click to edit profile */}
+            <button
+              onClick={() => setEditProfileOpen(true)}
+              title="Edit Profile"
+              className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-2xl sm:text-3xl font-bold border-2 border-white/30 shrink-0 hover:bg-white/30 transition-colors"
+            >
               {avatarLetter}
-            </div>
+            </button>
           </div>
 
-          {/* Free delivery banner */}
           <div className="relative mt-5 pt-4 border-t border-white/20 flex flex-wrap items-center gap-4 text-sm">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-green-300 animate-pulse" />
@@ -227,11 +497,15 @@ export default function CustomerDashboard() {
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
               {/* Avatar */}
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-xl font-bold text-white shadow-lg">
+                <button
+                  onClick={() => setEditProfileOpen(true)}
+                  title="Edit Profile"
+                  className="w-14 h-14 rounded-xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-xl font-bold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+                >
                   {avatarLetter}
-                </div>
+                </button>
                 <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{fullName}</p>
+                  <p className="font-semibold text-gray-900 truncate">{profileName}</p>
                   <p className="text-xs text-gray-500 truncate">{user.email}</p>
                 </div>
               </div>
@@ -240,7 +514,7 @@ export default function CustomerDashboard() {
               <div className="space-y-2.5 text-sm">
                 {[
                   { icon: '📧', label: 'Email', value: user.email ?? '-' },
-                  { icon: '📱', label: 'Phone', value: user.user_metadata?.phone ?? 'Not set' },
+                  { icon: '📱', label: 'Phone', value: profilePhone },
                   { icon: '✅', label: 'Status', value: user.email_confirmed_at ? 'Verified' : 'Pending verification' },
                   { icon: '🛡️', label: 'Role', value: user.user_metadata?.role ?? 'Customer' },
                 ].map(({ icon, label, value }) => (
@@ -254,17 +528,20 @@ export default function CustomerDashboard() {
                 ))}
               </div>
 
-              {/* CTA */}
+              {/* Buttons */}
               <div className="pt-3 border-t border-gray-100 space-y-2">
-                <button className="w-full py-2.5 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                  Edit Profile
-                </button>
-                <Link
-                  href="/forgot-password"
-                  className="block text-center w-full py-2.5 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                <button
+                  onClick={() => setEditProfileOpen(true)}
+                  className="w-full py-2.5 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-green-50 hover:border-green-300 hover:text-green-700 transition-all flex items-center justify-center gap-2"
                 >
-                  Change Password
-                </Link>
+                  ✏️ Edit Profile
+                </button>
+                <button
+                  onClick={() => setChangePasswordOpen(true)}
+                  className="w-full py-2.5 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all flex items-center justify-center gap-2"
+                >
+                  🔒 Change Password
+                </button>
               </div>
             </div>
 
@@ -309,6 +586,19 @@ export default function CustomerDashboard() {
           </div>
         </motion.div>
       </div>
+
+      {/* ── Modals ── */}
+      <EditProfileModal
+        open={editProfileOpen}
+        onClose={() => setEditProfileOpen(false)}
+        currentName={profileName}
+        currentPhone={profilePhone}
+        onSaved={(name, phone) => { setProfileName(name); setProfilePhone(phone); }}
+      />
+      <ChangePasswordModal
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </div>
   );
 }

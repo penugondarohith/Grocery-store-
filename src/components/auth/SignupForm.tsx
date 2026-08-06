@@ -67,7 +67,6 @@ export default function SignupForm() {
   const router = useRouter();
   const { signUpWithEmail, signInWithGoogle } = useAuthContext();
   const [serverError, setServerError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const {
@@ -98,7 +97,8 @@ export default function SignupForm() {
       );
       return;
     }
-    setSuccess(true);
+    // Redirect to home page after successful signup
+    router.push('/');
   };
 
   const handleGoogle = async () => {
@@ -109,27 +109,6 @@ export default function SignupForm() {
       setGoogleLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <AuthCard title="Check your email 📬" subtitle="">
-        <div className="text-center py-4">
-          <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-green-100 flex items-center justify-center">
-            <span className="text-4xl">✉️</span>
-          </div>
-          <p className="text-gray-600 text-sm leading-relaxed mb-6">
-            We&apos;ve sent a confirmation link to your email address. Please verify your email to activate your account.
-          </p>
-          <button
-            onClick={() => router.push('/login')}
-            className="text-sm text-green-600 hover:text-green-700 font-semibold"
-          >
-            ← Back to Sign In
-          </button>
-        </div>
-      </AuthCard>
-    );
-  }
 
   return (
     <AuthCard
