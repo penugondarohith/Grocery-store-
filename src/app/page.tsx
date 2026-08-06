@@ -9,7 +9,7 @@ import CustomerReviews from "@/components/home/CustomerReviews";
 import Newsletter from "@/components/home/Newsletter";
 
 export const metadata: Metadata = {
-  title: "GroceryMart — Fresh Groceries Delivered in 30 Minutes",
+  title: "Vijaya Lakshmi General Stores — Fresh Groceries Delivered in 30 Minutes",
   description:
     "Shop fresh groceries, Vijaya milk products, snacks, and cool drinks. Free door delivery on orders above ₹500. Best prices, fastest delivery.",
 };

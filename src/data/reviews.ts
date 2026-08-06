@@ -74,7 +74,7 @@ export const testimonials: CustomerTestimonial[] = [
     location: "Hyderabad",
     avatar: "LD",
     rating: 5,
-    comment: "GroceryMart has completely changed how I shop for groceries. Lightning fast delivery, fresh products, and amazing prices. I order twice a week!",
+    comment: "Vijaya Lakshmi General Stores has completely changed how I shop for groceries. Lightning fast delivery, fresh products, and amazing prices. I order twice a week!",
     orderCount: 87,
   },
   {

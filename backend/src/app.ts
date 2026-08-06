@@ -79,7 +79,7 @@ app.use(
   `${API}/docs`,
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
-    customSiteTitle: 'GroceryMart API Docs',
+    customSiteTitle: 'Vijaya Lakshmi General Stores API Docs',
     customCss: '.swagger-ui .topbar { background-color: #16a34a; }',
   })
 );

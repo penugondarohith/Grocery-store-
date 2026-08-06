@@ -533,8 +533,8 @@ export default function AdminPage() {
             <h2 className="text-lg font-bold text-gray-900">Admin Settings</h2>
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-5">
               {[
-                { label: "Store Name", val: "GroceryMart" },
-                { label: "Support Email", val: "support@grocerymart.in" },
+                { label: "Store Name", val: "Vijaya Lakshmi General Stores" },
+                { label: "Support Email", val: "support@Vijaya Lakshmi General Stores.in" },
                 { label: "Phone", val: "1800-123-4567" },
                 { label: "Min Order for Free Delivery", val: "₹500" },
                 { label: "Delivery Fee (below min)", val: "₹40" },

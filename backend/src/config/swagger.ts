@@ -5,14 +5,14 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'GroceryMart API',
+      title: 'Vijaya Lakshmi General Stores API',
       version: '1.0.0',
-      description: 'Production-ready REST API for GroceryMart e-commerce platform',
-      contact: { name: 'GroceryMart Team', email: 'api@grocerymart.in' },
+      description: 'Production-ready REST API for Vijaya Lakshmi General Stores e-commerce platform',
+      contact: { name: 'Vijaya Lakshmi General Stores Team', email: 'api@Vijaya Lakshmi General Stores.in' },
     },
     servers: [
       { url: `http://localhost:${env.PORT}/api/${env.API_VERSION}`, description: 'Development' },
-      { url: `https://api.grocerymart.in/api/${env.API_VERSION}`, description: 'Production' },
+      { url: `https://api.Vijaya Lakshmi General Stores.in/api/${env.API_VERSION}`, description: 'Production' },
     ],
     components: {
       securitySchemes: {

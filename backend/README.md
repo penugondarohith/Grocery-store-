@@ -1,4 +1,4 @@
-# GroceryMart Backend API
+# Vijaya Lakshmi General Stores Backend API
 
 Production-ready Node.js + Express.js + TypeScript + Prisma + Supabase PostgreSQL backend.
 

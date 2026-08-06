@@ -3,7 +3,7 @@ import LoginForm from '@/components/auth/LoginForm';
 
 export const metadata: Metadata = {
   title: 'Sign In',
-  description: 'Sign in to your GroceryMart account to order fresh groceries online.',
+  description: 'Sign in to your Vijaya Lakshmi General Stores account to order fresh groceries online.',
 };
 
 export default function LoginPage() {

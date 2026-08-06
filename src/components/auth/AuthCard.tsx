@@ -35,8 +35,8 @@ export default function AuthCard({ children, title, subtitle, badge }: AuthCardP
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
               <span className="text-xl">🛒</span>
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent">
-              GroceryMart
+            <span className="text-lg font-bold bg-gradient-to-r from-green-700 to-emerald-600 bg-clip-text text-transparent leading-tight text-center">
+              Vijaya Lakshmi General Stores
             </span>
           </Link>
 

@@ -386,7 +386,7 @@ export default function CustomerDashboard() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
               <span className="text-base">🛒</span>
             </div>
-            <span className="font-bold text-green-700 text-lg">GroceryMart</span>
+            <span className="font-bold text-green-700 text-base leading-tight">Vijaya Lakshmi General Stores</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link

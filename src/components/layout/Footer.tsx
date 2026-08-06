@@ -115,15 +115,15 @@ export default function Footer() {
             <a href="tel:+918001234567" className="flex items-center gap-1.5 hover:text-green-400 transition-colors">
               <Phone className="w-3.5 h-3.5" /> 1800-123-4567
             </a>
-            <a href="mailto:support@grocerymart.in" className="flex items-center gap-1.5 hover:text-green-400 transition-colors">
-              <Mail className="w-3.5 h-3.5" /> support@grocerymart.in
+            <a href="mailto:support@vijayalakshmistore.in" className="flex items-center gap-1.5 hover:text-green-400 transition-colors">
+              <Mail className="w-3.5 h-3.5" /> support@vijayalakshmistore.in
             </a>
             <span className="flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5" /> Hyderabad, Andhra Pradesh
             </span>
           </div>
           <p className="text-xs text-gray-500">
-            © {new Date().getFullYear()} GroceryMart. All rights reserved.
+            © {new Date().getFullYear()} Vijaya Lakshmi General Stores. All rights reserved.
           </p>
         </div>
       </div>

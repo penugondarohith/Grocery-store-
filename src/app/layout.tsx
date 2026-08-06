@@ -10,15 +10,15 @@ import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: {
-    default: "GroceryMart — Fresh Groceries Delivered in 30 Minutes",
-    template: "%s | GroceryMart",
+    default: "Vijaya Lakshmi General Stores — Fresh Groceries Delivered",
+    template: "%s | Vijaya Lakshmi General Stores",
   },
   description:
     "Order fresh groceries, Vijaya milk products, snacks, and cool drinks online. Free delivery on orders above ₹500. Best prices guaranteed.",
   keywords: ["grocery", "online grocery", "Vijaya milk", "fresh vegetables", "snacks", "delivery"],
   metadataBase: new URL("https://grocerymart.in"),
   openGraph: {
-    siteName: "GroceryMart",
+    siteName: "Vijaya Lakshmi General Stores",
     type: "website",
   },
 };

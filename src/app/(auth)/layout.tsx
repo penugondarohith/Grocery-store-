@@ -2,10 +2,10 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: {
-    default: 'GroceryMart — Sign In',
-    template: '%s | GroceryMart',
+    default: 'Vijaya Lakshmi General Stores — Sign In',
+    template: '%s | Vijaya Lakshmi General Stores',
   },
-  description: 'Sign in to your GroceryMart account to order fresh groceries online.',
+  description: 'Sign in to your Vijaya Lakshmi General Stores account to order fresh groceries online.',
 };
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {

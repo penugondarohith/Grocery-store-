@@ -4,7 +4,7 @@ import { logger } from './config/logger';
 import prisma from './config/database';
 
 const server = app.listen(env.PORT, () => {
-  logger.info(`🚀 GroceryMart API running on port ${env.PORT} [${env.NODE_ENV}]`);
+  logger.info(`🚀 Vijaya Lakshmi General Stores API running on port ${env.PORT} [${env.NODE_ENV}]`);
   logger.info(`📖 Swagger docs: http://localhost:${env.PORT}/api/${env.API_VERSION}/docs`);
   logger.info(`❤️  Health check: http://localhost:${env.PORT}/health`);
 });

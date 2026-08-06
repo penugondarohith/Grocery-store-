@@ -3,7 +3,7 @@ import ForgotPasswordForm from '@/components/auth/ForgotPasswordForm';
 
 export const metadata: Metadata = {
   title: 'Forgot Password',
-  description: 'Reset your GroceryMart account password.',
+  description: 'Reset your Vijaya Lakshmi General Stores account password.',
 };
 
 export default function ForgotPasswordPage() {
