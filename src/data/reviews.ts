@@ -71,7 +71,7 @@ export const testimonials: CustomerTestimonial[] = [
   {
     id: "t1",
     name: "Lakshmi Devi",
-    location: "Hyderabad",
+    location: "Penamaluru",
     avatar: "LD",
     rating: 5,
     comment: "Vijaya Lakshmi General Stores has completely changed how I shop for groceries. Lightning fast delivery, fresh products, and amazing prices. I order twice a week!",

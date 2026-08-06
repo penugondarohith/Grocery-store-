@@ -62,7 +62,7 @@ export default function Navbar() {
           {/* Location */}
           <div className="hidden md:flex items-center gap-1 text-xs text-gray-600 cursor-pointer hover:text-green-600 transition-colors flex-shrink-0">
             <MapPin className="w-3.5 h-3.5 text-green-600" />
-            <span>Deliver to <strong className="text-gray-900">Hyderabad</strong></span>
+            <span>Penamaluru Center, <strong className="text-gray-900">Opp to SBI</strong></span>
           </div>
 
           {/* Search bar */}
