@@ -12,7 +12,6 @@ import {
   ChevronDown,
   Package,
   Bell,
-  MapPin,
   Leaf,
   LogOut,
 } from "lucide-react";
@@ -58,12 +57,6 @@ export default function Navbar() {
               Vijaya Lakshmi<span className="text-green-600"> General Stores</span>
             </span>
           </Link>
-
-          {/* Location */}
-          <div className="hidden md:flex items-center gap-1 text-xs text-gray-600 cursor-pointer hover:text-green-600 transition-colors flex-shrink-0">
-            <MapPin className="w-3.5 h-3.5 text-green-600" />
-            <span>12-17, D K R Complex, <strong className="text-gray-900">Penamaluru, AP 521137</strong></span>
-          </div>
 
           {/* Spacer */}
           <div className="flex-1" />
