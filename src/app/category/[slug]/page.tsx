@@ -1,29 +1,24 @@
 "use client";
 
 import { useState, useMemo, use } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { SlidersHorizontal, X, Search } from "lucide-react";
 import { notFound } from "next/navigation";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import ProductCard from "@/components/ui/ProductCard";
 import SkeletonCard from "@/components/ui/SkeletonCard";
-import { getProductsByCategory } from "@/data/products";
+import ActiveFilterChips, { ActiveFilter } from "@/components/filters/ActiveFilterChips";
+import { getProductsByCategory, products as allProductsList } from "@/data/products";
 import { getCategoryBySlug } from "@/data/categories";
 
 const SORT_OPTIONS = [
-  { value: "relevance", label: "Relevance" },
-  { value: "price_asc", label: "Price: Low to High" },
-  { value: "price_desc", label: "Price: High to Low" },
-  { value: "rating", label: "Top Rated" },
+  { value: "relevance", label: "Featured" },
+  { value: "price_asc", label: "Price: Low → High" },
+  { value: "price_desc", label: "Price: High → Low" },
+  { value: "rating", label: "Highest Rated" },
   { value: "discount", label: "Best Discount" },
+  { value: "newest", label: "Newest" },
 ];
-
-const BRANDS_MAP: Record<string, string[]> = {
-  groceries: ["India Gate", "Fortune", "Aashirvaad", "Tata"],
-  "vijaya-milk-products": ["Vijaya"],
-  snacks: ["Lays", "Kurkure", "Haldiram's", "Bingo"],
-  "cool-drinks": ["Coca-Cola", "Sprite", "Tropicana", "Pepsi"],
-};
 
 const PAGE_SIZE = 8;
 
@@ -34,18 +29,25 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
 
   const [sort, setSort] = useState("relevance");
   const [search, setSearch] = useState("");
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 500]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 9999]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [inStockOnly, setInStockOnly] = useState(false);
   const [minDiscount, setMinDiscount] = useState(0);
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const brands = BRANDS_MAP[slug] ?? [];
+  // Derive brands dynamically from actual products in this category
+  const brands = useMemo(() => {
+    const set = new Set(allProducts.map((p) => p.brand));
+    return Array.from(set).sort();
+  }, [allProducts]);
+
+  const maxPrice = useMemo(() => Math.max(...allProducts.map((p) => p.price), 500), [allProducts]);
 
   const filtered = useMemo(() => {
     let list = allProducts.filter((p) => {
-      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search && !p.name.toLowerCase().includes(search.toLowerCase()) &&
+          !p.brand.toLowerCase().includes(search.toLowerCase())) return false;
       if (p.price < priceRange[0] || p.price > priceRange[1]) return false;
       if (selectedBrands.length && !selectedBrands.includes(p.brand)) return false;
       if (inStockOnly && !p.inStock) return false;
@@ -74,26 +76,38 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
 
   const clearFilters = () => {
     setSearch(""); setSelectedBrands([]); setInStockOnly(false);
-    setMinDiscount(0); setPriceRange([0, 500]); setPage(1);
+    setMinDiscount(0); setPriceRange([0, 9999]); setPage(1);
   };
+
+  // Build active filter chips
+  const activeFilters: ActiveFilter[] = [
+    ...(priceRange[0] > 0 || priceRange[1] < 9999
+      ? [{ key: "price", label: `₹${priceRange[0]}–₹${priceRange[1]}`, onRemove: () => { setPriceRange([0, 9999]); setPage(1); } }]
+      : []),
+    ...selectedBrands.map((b) => ({ key: `brand-${b}`, label: b, onRemove: () => toggleBrand(b) })),
+    ...(inStockOnly ? [{ key: "stock", label: "In Stock", onRemove: () => { setInStockOnly(false); setPage(1); } }] : []),
+    ...(minDiscount > 0 ? [{ key: "discount", label: `${minDiscount}%+ off`, onRemove: () => { setMinDiscount(0); setPage(1); } }] : []),
+    ...(search ? [{ key: "search", label: `"${search}"`, onRemove: () => { setSearch(""); setPage(1); } }] : []),
+  ];
 
   if (!category && allProducts.length === 0) return notFound();
 
   const FilterPanel = () => (
     <div className="space-y-6">
-      {/* Price range */}
+      {/* Price range buckets */}
       <div>
         <h3 className="text-sm font-bold text-gray-800 mb-3">Price Range</h3>
         <div className="space-y-2">
-          {[[0, 100], [100, 250], [250, 500], [500, 9999]].map(([min, max]) => (
-            <label key={`${min}-${max}`} className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="price" className="accent-green-600"
+          {([[0, 9999, "All Prices"], [0, 100, "Under ₹100"], [100, 250, "₹100 – ₹250"], [250, 500, "₹250 – ₹500"], [500, 9999, "Above ₹500"]] as const).map(([min, max, label]) => (
+            <label key={label} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="price"
+                className="accent-green-600"
                 checked={priceRange[0] === min && priceRange[1] === max}
                 onChange={() => { setPriceRange([min, max]); setPage(1); }}
               />
-              <span className="text-sm text-gray-600">
-                {min === 0 ? "Under" : `₹${min} –`} {max === 9999 ? "₹500+" : `₹${max}`}
-              </span>
+              <span className="text-sm text-gray-600">{label}</span>
             </label>
           ))}
         </div>
@@ -106,7 +120,9 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
           <div className="space-y-2">
             {brands.map((brand) => (
               <label key={brand} className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="accent-green-600 w-4 h-4"
+                <input
+                  type="checkbox"
+                  className="accent-green-600 w-4 h-4 rounded"
                   checked={selectedBrands.includes(brand)}
                   onChange={() => toggleBrand(brand)}
                 />
@@ -117,13 +133,16 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
         </div>
       )}
 
-      {/* Min Discount */}
+      {/* Minimum Discount */}
       <div>
         <h3 className="text-sm font-bold text-gray-800 mb-3">Minimum Discount</h3>
         <div className="space-y-2">
-          {[0, 10, 15, 20].map((d) => (
+          {[0, 10, 15, 20, 25].map((d) => (
             <label key={d} className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="discount" className="accent-green-600"
+              <input
+                type="radio"
+                name="discount"
+                className="accent-green-600"
                 checked={minDiscount === d}
                 onChange={() => { setMinDiscount(d); setPage(1); }}
               />
@@ -133,17 +152,24 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
         </div>
       </div>
 
-      {/* In Stock */}
+      {/* Stock */}
       <div>
+        <h3 className="text-sm font-bold text-gray-800 mb-3">Availability</h3>
         <label className="flex items-center gap-2 cursor-pointer">
-          <input type="checkbox" className="accent-green-600 w-4 h-4"
-            checked={inStockOnly} onChange={(e) => { setInStockOnly(e.target.checked); setPage(1); }}
+          <input
+            type="checkbox"
+            className="accent-green-600 w-4 h-4"
+            checked={inStockOnly}
+            onChange={(e) => { setInStockOnly(e.target.checked); setPage(1); }}
           />
-          <span className="text-sm font-semibold text-gray-700">In Stock Only</span>
+          <span className="text-sm text-gray-600">In Stock Only</span>
         </label>
       </div>
 
-      <button onClick={clearFilters} className="w-full py-2 border border-gray-300 text-sm text-gray-600 rounded-xl hover:bg-gray-50 transition-colors">
+      <button
+        onClick={clearFilters}
+        className="w-full py-2 border border-gray-300 text-sm text-gray-600 rounded-xl hover:bg-gray-50 transition-colors"
+      >
         Clear All Filters
       </button>
     </div>
@@ -151,7 +177,6 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
-      {/* Breadcrumb */}
       <Breadcrumb items={[{ label: category?.name ?? slug }]} />
 
       {/* Category Banner */}
@@ -169,7 +194,7 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
 
       <div className="flex gap-6 mt-6">
         {/* Desktop Sidebar */}
-        <aside className="hidden lg:block w-56 flex-shrink-0">
+        <aside className="hidden lg:block w-60 flex-shrink-0">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 sticky top-24">
             <h2 className="text-base font-bold text-gray-900 mb-5 flex items-center gap-2">
               <SlidersHorizontal className="w-4 h-4" /> Filters
@@ -179,8 +204,8 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
         </aside>
 
         <div className="flex-1 min-w-0">
-          {/* Top bar: search + sort + mobile filter toggle */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-5">
+          {/* Top bar */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
@@ -203,42 +228,86 @@ export default function CategoryPage({ params }: { params: Promise<{ slug: strin
               </select>
               <button
                 onClick={() => setFiltersOpen(!filtersOpen)}
-                className="lg:hidden flex items-center gap-1.5 px-4 py-2.5 bg-white rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50"
+                className={`lg:hidden flex items-center gap-1.5 px-4 py-2.5 rounded-xl border text-sm font-medium transition-colors ${
+                  activeFilters.length > 0
+                    ? "bg-green-600 text-white border-green-600"
+                    : "bg-white border-gray-200 hover:bg-gray-50"
+                }`}
               >
-                <SlidersHorizontal className="w-4 h-4" /> Filters
+                <SlidersHorizontal className="w-4 h-4" />
+                Filters {activeFilters.length > 0 && `(${activeFilters.length})`}
               </button>
             </div>
           </div>
 
-          {/* Mobile filter panel */}
-          {filtersOpen && (
-            <div className="lg:hidden bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-5">
-              <div className="flex justify-between mb-4">
-                <h2 className="font-bold text-gray-900">Filters</h2>
-                <button onClick={() => setFiltersOpen(false)}><X className="w-5 h-5" /></button>
-              </div>
-              <FilterPanel />
+          {/* Active filter chips */}
+          {activeFilters.length > 0 && (
+            <div className="mb-4">
+              <ActiveFilterChips filters={activeFilters} onClearAll={clearFilters} />
             </div>
           )}
 
+          {/* Mobile filter drawer */}
+          <AnimatePresence>
+            {filtersOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  onClick={() => setFiltersOpen(false)}
+                  className="lg:hidden fixed inset-0 bg-black/40 z-40"
+                />
+                <motion.div
+                  initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                  className="lg:hidden fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-50 p-6 max-h-[85vh] overflow-y-auto"
+                >
+                  <div className="flex justify-between items-center mb-5">
+                    <h2 className="font-bold text-gray-900 text-lg flex items-center gap-2">
+                      <SlidersHorizontal className="w-5 h-5" /> Filters
+                    </h2>
+                    <button onClick={() => setFiltersOpen(false)} className="p-2 rounded-xl hover:bg-gray-100 transition-colors">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <FilterPanel />
+                  <button
+                    onClick={() => setFiltersOpen(false)}
+                    className="w-full mt-5 py-3 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-colors"
+                  >
+                    Show {filtered.length} results
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
           {/* Results count */}
           <p className="text-sm text-gray-500 mb-4">
-            Showing <span className="font-semibold text-gray-800">{filtered.length}</span> results
+            Showing <span className="font-semibold text-gray-800">{filtered.length}</span> of {allProducts.length} products
           </p>
 
           {/* Product grid */}
           {paginated.length === 0 ? (
             <div className="text-center py-16">
               <p className="text-4xl mb-3">🔍</p>
-              <p className="text-gray-500 font-medium">No products found</p>
-              <button onClick={clearFilters} className="mt-4 text-green-600 font-semibold text-sm underline">Clear filters</button>
+              <p className="text-gray-700 font-semibold">No products match your filters</p>
+              <p className="text-gray-400 text-sm mt-1 mb-4">Try adjusting or clearing your filters</p>
+              <button
+                onClick={clearFilters}
+                className="px-5 py-2.5 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors text-sm"
+              >
+                Clear Filters
+              </button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            <motion.div
+              layout
+              className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4"
+            >
               {paginated.map((p) => (
                 <ProductCard key={p.id} product={p} />
               ))}
-            </div>
+            </motion.div>
           )}
 
           {/* Pagination */}

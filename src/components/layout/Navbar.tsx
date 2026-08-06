@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search,
   ShoppingCart,
   Heart,
   User,
@@ -21,12 +20,12 @@ import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { categories } from "@/data/categories";
 import { useAuthContext } from "@/context/AuthContext";
+import SearchBar from "@/components/search/SearchBar";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const { itemCount } = useCart();
   const { count: wishCount } = useWishlist();
   const { user, loading, signOut } = useAuthContext();
@@ -66,19 +65,7 @@ export default function Navbar() {
           </div>
 
           {/* Search bar */}
-          <div className="flex-1 relative max-w-xl">
-            <div className="relative flex items-center">
-              <Search className="absolute left-3 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search groceries, brands, categories..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                aria-label="Search products"
-              />
-            </div>
-          </div>
+          <SearchBar />
 
           {/* Desktop Nav Links */}
           <div className="hidden lg:flex items-center gap-1">
