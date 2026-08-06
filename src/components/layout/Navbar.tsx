@@ -46,14 +46,15 @@ export default function Navbar() {
           : "bg-white shadow-sm"
       }`}
     >
-      <nav className="max-w-7xl mx-auto px-4 py-3">
+      {/* ── Row 1: Logo + Nav + Icons ── */}
+      <nav className="max-w-7xl mx-auto px-4 py-2.5">
         <div className="flex items-center gap-4">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2 flex-shrink-0">
             <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-green-700 rounded-xl flex items-center justify-center shadow-md">
               <Leaf className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-gray-900 hidden sm:block leading-tight">
+            <span className="text-base font-bold text-gray-900 hidden sm:block leading-tight">
               Vijaya Lakshmi<span className="text-green-600"> General Stores</span>
             </span>
           </Link>
@@ -64,8 +65,8 @@ export default function Navbar() {
             <span>12-17, D K R Complex, <strong className="text-gray-900">Penamaluru, AP 521137</strong></span>
           </div>
 
-          {/* Search bar */}
-          <SearchBar />
+          {/* Spacer */}
+          <div className="flex-1" />
 
           {/* Desktop Nav Links */}
           <div className="hidden lg:flex items-center gap-1">
@@ -117,7 +118,7 @@ export default function Navbar() {
           </div>
 
           {/* Icon group */}
-          <div className="flex items-center gap-1 ml-auto lg:ml-0">
+          <div className="flex items-center gap-1">
             {/* Wishlist */}
             <Link
               href="/dashboard?tab=wishlist"
@@ -151,7 +152,7 @@ export default function Navbar() {
               )}
             </Link>
 
-            {/* Auth button */}
+            {/* Auth */}
             {!loading && (
               user ? (
                 <div className="hidden sm:flex items-center gap-2 ml-1">
@@ -197,66 +198,69 @@ export default function Navbar() {
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
             >
-              {mobileOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
-
-        {/* Mobile Menu */}
-        <AnimatePresence>
-          {mobileOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="lg:hidden overflow-hidden mt-3 border-t border-gray-100 pt-3"
-            >
-              <div className="flex flex-col gap-1">
-                {categories.map((cat) => (
-                  <Link
-                    key={cat.id}
-                    href={`/category/${cat.slug}`}
-                    className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-green-50 hover:text-green-700"
-                    onClick={() => setMobileOpen(false)}
-                  >
-                    {cat.icon} {cat.name}
-                  </Link>
-                ))}
-                <div className="border-t border-gray-100 my-1" />
-                <Link href="/#deals" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
-                  🔥 Offers
-                </Link>
-                <Link href="/dashboard?tab=orders" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
-                  📦 My Orders
-                </Link>
-                {user ? (
-                  <>
-                    <Link href="/dashboard" className="px-3 py-2.5 text-sm font-semibold text-green-700" onClick={() => setMobileOpen(false)}>
-                      👤 {displayName}
-                    </Link>
-                    <button onClick={() => { signOut(); setMobileOpen(false); }} className="px-3 py-2.5 text-sm font-medium text-red-600 text-left">
-                      🚪 Sign Out
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <Link href="/login" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
-                      🔑 Sign In
-                    </Link>
-                    <Link href="/signup" className="px-3 py-2.5 text-sm font-semibold text-green-700" onClick={() => setMobileOpen(false)}>
-                      👤 Create Account
-                    </Link>
-                  </>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </nav>
+
+      {/* ── Row 2: Full-width Search Bar ── */}
+      <div className="border-t border-gray-100 bg-white">
+        <div className="max-w-7xl mx-auto px-4 py-2">
+          <SearchBar />
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="lg:hidden overflow-hidden border-t border-gray-100"
+          >
+            <div className="flex flex-col gap-1 px-4 py-3">
+              {categories.map((cat) => (
+                <Link
+                  key={cat.id}
+                  href={`/category/${cat.slug}`}
+                  className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-green-50 hover:text-green-700"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {cat.icon} {cat.name}
+                </Link>
+              ))}
+              <div className="border-t border-gray-100 my-1" />
+              <Link href="/#deals" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
+                🔥 Offers
+              </Link>
+              <Link href="/dashboard?tab=orders" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
+                📦 My Orders
+              </Link>
+              {user ? (
+                <>
+                  <Link href="/dashboard" className="px-3 py-2.5 text-sm font-semibold text-green-700" onClick={() => setMobileOpen(false)}>
+                    👤 {displayName}
+                  </Link>
+                  <button onClick={() => { signOut(); setMobileOpen(false); }} className="px-3 py-2.5 text-sm font-medium text-red-600 text-left">
+                    🚪 Sign Out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link href="/login" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
+                    🔑 Sign In
+                  </Link>
+                  <Link href="/signup" className="px-3 py-2.5 text-sm font-semibold text-green-700" onClick={() => setMobileOpen(false)}>
+                    👤 Create Account
+                  </Link>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
