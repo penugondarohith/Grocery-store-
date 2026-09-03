@@ -2,7 +2,6 @@
 
 import { useEffect, useState, use } from 'react';
 import { useAuthContext } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -10,34 +9,23 @@ import {
   Tag, ChevronLeft, Phone, AlertCircle, RotateCcw,
 } from 'lucide-react';
 import { formatPrice } from '@/lib/utils';
+import { getOrderById } from '@/services/orderService';
+import { getLocalOrderById } from '@/services/localOrderService';
+import { toOrderDetail, OrderDetail, TrackingEvent } from '@/lib/orderAdapter';
 
-interface Tracking { id: string; status: string; description: string | null; location: string | null; trackedAt: string }
-interface OrderItem { id: string; productName: string; variantName: string; quantity: number; unitPrice: number; totalPrice: number; imageUrl: string | null; productSlug: string }
-interface OrderDetail {
-  id: string; orderNumber: string; status: string; deliveryType: string;
-  subtotal: number; deliveryFee: number; taxAmount: number; discountAmount: number; totalAmount: number;
-  placedAt: string; estimatedDeliveryAt: string | null; deliveredAt: string | null; notes: string | null;
-  address: { label: string; fullName: string; phone: string; line1: string; line2: string | null; city: string; state: string; pincode: string } | null;
-  coupon: { code: string; type: string; value: number } | null;
-  payment: { method: string; status: string; amount: number; paidAt: string | null; transactionId: string | null } | null;
-  tracking: Tracking[];
-  items: OrderItem[];
-}
-
-const STATUS_STEPS = ['pending', 'confirmed', 'processing', 'packed', 'shipped', 'out_for_delivery', 'delivered'];
+const STATUS_STEPS = ['pending', 'confirmed', 'processing', 'packed', 'out_for_delivery', 'delivered'];
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  pending:          { label: 'Order Placed',       icon: Clock,         color: 'text-amber-600'  },
-  confirmed:        { label: 'Confirmed',           icon: CheckCircle2,  color: 'text-blue-600'   },
-  processing:       { label: 'Preparing',           icon: Package,       color: 'text-violet-600' },
-  packed:           { label: 'Packed',              icon: Package,       color: 'text-cyan-600'   },
-  shipped:          { label: 'Shipped',             icon: Truck,         color: 'text-indigo-600' },
-  out_for_delivery: { label: 'Out for Delivery',    icon: Truck,         color: 'text-orange-600' },
-  delivered:        { label: 'Delivered',           icon: CheckCircle2,  color: 'text-green-600'  },
-  cancelled:        { label: 'Cancelled',           icon: AlertCircle,   color: 'text-red-600'    },
-  refunded:         { label: 'Refunded',            icon: RotateCcw,     color: 'text-gray-500'   },
+  pending:          { label: 'Order Placed',     icon: Clock,         color: 'text-amber-600'  },
+  confirmed:        { label: 'Confirmed',         icon: CheckCircle2,  color: 'text-blue-600'   },
+  processing:       { label: 'Preparing',         icon: Package,       color: 'text-violet-600' },
+  packed:           { label: 'Packed',            icon: Package,       color: 'text-cyan-600'   },
+  out_for_delivery: { label: 'Out for Delivery',  icon: Truck,         color: 'text-orange-600' },
+  delivered:        { label: 'Delivered',         icon: CheckCircle2,  color: 'text-green-600'  },
+  cancelled:        { label: 'Cancelled',         icon: AlertCircle,   color: 'text-red-600'    },
+  refunded:         { label: 'Refunded',          icon: RotateCcw,     color: 'text-gray-500'   },
 };
 
-function TrackingTimeline({ steps, tracking }: { steps: Tracking[]; tracking: string }) {
+function TrackingTimeline({ steps, tracking }: { steps: TrackingEvent[]; tracking: string }) {
   const isCancelled = tracking === 'cancelled' || tracking === 'refunded';
   const currentIdx = isCancelled ? -1 : STATUS_STEPS.indexOf(tracking);
 
@@ -59,8 +47,7 @@ function TrackingTimeline({ steps, tracking }: { steps: Tracking[]; tracking: st
         const active = i === currentIdx;
         const sc = STATUS_CONFIG[step];
         const Icon = sc.icon;
-        // find matching tracking event
-        const event = steps.find(t => t.status === step);
+        const event = steps.find((t) => t.status === step);
 
         return (
           <div key={step} className="flex gap-4">
@@ -109,22 +96,52 @@ function TrackingTimeline({ steps, tracking }: { steps: Tracking[]; tracking: st
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user, loading: authLoading } = useAuthContext();
-  const router = useRouter();
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!authLoading && !user) router.push('/auth/signin?redirect=/orders');
-  }, [authLoading, user, router]);
+    async function load() {
+      setLoading(true);
+      setError('');
 
-  useEffect(() => {
-    if (!user) return;
-    fetch(`/api/customer/orders/${id}`)
-      .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(d => { setOrder(d.order); setLoading(false); })
-      .catch(() => { setError('Order not found'); setLoading(false); });
-  }, [user, id]);
+      try {
+        let detail: OrderDetail | null = null;
+
+        // 1. Try localStorage first (works for guests and fallback)
+        const localOrder = getLocalOrderById(id);
+        if (localOrder) {
+          detail = toOrderDetail(localOrder);
+        }
+
+        // 2. If user is authenticated, also try Supabase (may override local)
+        if (user && !detail) {
+          try {
+            const supabaseOrder = await getOrderById(id);
+            if (supabaseOrder) {
+              detail = toOrderDetail(supabaseOrder as Parameters<typeof toOrderDetail>[0]);
+            }
+          } catch {
+            // Supabase failed, use local if available
+          }
+        }
+
+        if (detail) {
+          setOrder(detail);
+        } else {
+          setError('Order not found');
+        }
+      } catch {
+        setError('Failed to load order');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (!authLoading) {
+      load();
+    }
+  }, [id, user, authLoading]);
 
   if (authLoading || loading) {
     return (
@@ -144,6 +161,9 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
       <div className="max-w-md mx-auto px-4 py-20 text-center">
         <p className="text-4xl mb-3">📦</p>
         <h1 className="text-xl font-bold text-gray-900 mb-2">{error || 'Order not found'}</h1>
+        <p className="text-sm text-gray-500 mb-6">
+          {!user ? 'Guest orders are only visible on the device they were placed on.' : ''}
+        </p>
         <Link href="/orders" className="mt-4 inline-block px-5 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700">
           Back to Orders
         </Link>
@@ -247,7 +267,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Status</span>
-                  <span className={`font-bold text-xs px-2 py-0.5 rounded-full ${order.payment.status === 'paid' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'}`}>
+                  <span className={`font-bold text-xs px-2 py-0.5 rounded-full ${
+                    order.payment.status === 'paid'
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-amber-50 text-amber-700'
+                  }`}>
                     {order.payment.status}
                   </span>
                 </div>
@@ -269,7 +293,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <h2 className="font-bold text-gray-900">Items Ordered</h2>
         </div>
         <div className="divide-y divide-gray-50">
-          {order.items.map(item => (
+          {order.items.map((item) => (
             <div key={item.id} className="flex items-center gap-4 px-5 py-4">
               <div className="w-14 h-14 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
                 {item.imageUrl
@@ -278,9 +302,13 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 }
               </div>
               <div className="flex-1 min-w-0">
-                <Link href={`/product/${item.productSlug}`} className="text-sm font-semibold text-gray-900 hover:text-green-700 transition-colors line-clamp-1">
-                  {item.productName}
-                </Link>
+                {item.productSlug ? (
+                  <Link href={`/product/${item.productSlug}`} className="text-sm font-semibold text-gray-900 hover:text-green-700 transition-colors line-clamp-1">
+                    {item.productName}
+                  </Link>
+                ) : (
+                  <p className="text-sm font-semibold text-gray-900 line-clamp-1">{item.productName}</p>
+                )}
                 <p className="text-xs text-gray-400">{item.variantName}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{formatPrice(item.unitPrice)} × {item.quantity}</p>
               </div>
@@ -295,7 +323,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             { label: 'Subtotal', value: formatPrice(order.subtotal) },
             { label: 'Delivery', value: order.deliveryFee === 0 ? 'FREE' : formatPrice(order.deliveryFee) },
             { label: 'GST', value: formatPrice(order.taxAmount) },
-          ].map(row => (
+          ].map((row) => (
             <div key={row.label} className="flex justify-between text-sm">
               <span className="text-gray-500">{row.label}</span>
               <span className="font-semibold text-gray-900">{row.value}</span>

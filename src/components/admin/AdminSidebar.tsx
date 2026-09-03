@@ -7,9 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Percent, Gift,
   BarChart2, Settings, LogOut, Bell, ChevronLeft, ChevronRight,
-  Search, Warehouse, Star, Menu, X,
+  Warehouse, Star, Menu, X, Tag, CreditCard, Image, ClipboardList, FolderOpen,
 } from 'lucide-react';
 import { useAuthContext } from '@/context/AuthContext';
+import { useAdminData } from '@/context/AdminDataContext';
 
 interface AdminContextValue {
   sidebarOpen: boolean;
@@ -18,19 +19,51 @@ interface AdminContextValue {
 export const AdminContext = createContext<AdminContextValue>({ sidebarOpen: true, setSidebarOpen: () => {} });
 export const useAdmin = () => useContext(AdminContext);
 
-const NAV_ITEMS = [
-  { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/products', label: 'Products', icon: Package },
-  { href: '/admin/inventory', label: 'Inventory', icon: Warehouse },
-  { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
-  { href: '/admin/customers', label: 'Customers', icon: Users },
-  { href: '/admin/coupons', label: 'Coupons', icon: Percent },
-  { href: '/admin/offers', label: 'Offers', icon: Gift },
-  { href: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
-  { href: '/admin/notifications', label: 'Notifications', icon: Bell },
-  { href: '/admin/reviews', label: 'Reviews', icon: Star },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+const NAV_GROUPS = [
+  {
+    label: 'Main',
+    items: [
+      { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { href: '/admin/analytics', label: 'Analytics', icon: BarChart2 },
+    ],
+  },
+  {
+    label: 'Catalog',
+    items: [
+      { href: '/admin/products', label: 'Products', icon: Package },
+      { href: '/admin/categories', label: 'Categories', icon: FolderOpen },
+      { href: '/admin/inventory', label: 'Inventory', icon: Warehouse },
+    ],
+  },
+  {
+    label: 'Sales',
+    items: [
+      { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
+      { href: '/admin/payments', label: 'Payments', icon: CreditCard },
+      { href: '/admin/customers', label: 'Customers', icon: Users },
+    ],
+  },
+  {
+    label: 'Marketing',
+    items: [
+      { href: '/admin/coupons', label: 'Coupons', icon: Tag },
+      { href: '/admin/offers', label: 'Offers', icon: Gift },
+      { href: '/admin/content', label: 'Content', icon: Image },
+    ],
+  },
+  {
+    label: 'Other',
+    items: [
+      { href: '/admin/reviews', label: 'Reviews', icon: Star },
+      { href: '/admin/notifications', label: 'Notifications', icon: Bell },
+      { href: '/admin/activity', label: 'Activity Log', icon: ClipboardList },
+      { href: '/admin/settings', label: 'Settings', icon: Settings },
+    ],
+  },
 ];
+
+// Flat list for mobile / collapsed
+const ALL_NAV_ITEMS = NAV_GROUPS.flatMap(g => g.items);
 
 export default function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -39,9 +72,16 @@ export default function AdminSidebar() {
   const router = useRouter();
   const { signOut, user } = useAuthContext();
 
+  const { isAdminBypass, disableAdminBypass } = useAdminData();
+
   const handleSignOut = async () => {
-    await signOut();
-    router.push('/');
+    if (isAdminBypass) {
+      disableAdminBypass();
+      router.push('/admin/login');
+    } else {
+      await signOut();
+      router.push('/');
+    }
   };
 
   const NavItem = ({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) => {
@@ -85,24 +125,39 @@ export default function AdminSidebar() {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map((item) => (
-          <NavItem key={item.href} {...item} />
-        ))}
+      <nav className="flex-1 p-3 overflow-y-auto space-y-4">
+        {collapsed ? (
+          <div className="space-y-0.5">
+            {ALL_NAV_ITEMS.map((item) => (
+              <NavItem key={item.href} {...item} />
+            ))}
+          </div>
+        ) : (
+          NAV_GROUPS.map(group => (
+            <div key={group.label}>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest px-3 mb-1">{group.label}</p>
+              <div className="space-y-0.5">
+                {group.items.map(item => <NavItem key={item.href} {...item} />)}
+              </div>
+            </div>
+          ))
+        )}
       </nav>
 
       {/* User + Logout */}
       <div className="p-3 border-t border-gray-100 space-y-2">
-        {!collapsed && user && (
+        {!collapsed && (
           <div className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 rounded-xl">
             <div className="w-7 h-7 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              {user.email?.[0]?.toUpperCase() ?? 'A'}
+              {isAdminBypass ? 'A' : (user?.email?.[0]?.toUpperCase() ?? 'A')}
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-gray-900 truncate">
-                {user.user_metadata?.full_name ?? 'Admin'}
+                {isAdminBypass ? 'Admin' : (user?.user_metadata?.full_name ?? 'Admin')}
               </p>
-              <p className="text-[10px] text-gray-400 truncate">{user.email}</p>
+              <p className="text-[10px] text-gray-400 truncate">
+                {isAdminBypass ? 'admin@vlgs.store' : (user?.email ?? '')}
+              </p>
             </div>
           </div>
         )}

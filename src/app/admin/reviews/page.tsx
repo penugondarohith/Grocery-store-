@@ -1,219 +1,166 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, Check, Trash2, Eye, X, CheckCircle2 } from 'lucide-react';
+import { Star, Check, X, Eye, Trash2, CheckCircle2, EyeOff } from 'lucide-react';
+import { useAdminData } from '@/context/AdminDataContext';
+import { AdminReview } from '@/types/admin';
 
-interface ReviewRow {
-  id: string;
-  rating: number;
-  title: string | null;
-  body: string;
-  isApproved: boolean;
-  isVerifiedPurchase: boolean;
-  helpfulCount: number;
-  createdAt: string;
-  user: { id: string; fullName: string; email: string; avatarUrl: string | null };
-  product: { id: string; name: string; imageUrl: string | null; slug: string };
-}
+const STATUS_CONFIG = {
+  pending:  { label: 'Pending',  cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  approved: { label: 'Approved', cls: 'bg-green-50 text-green-700 border-green-200' },
+  hidden:   { label: 'Hidden',   cls: 'bg-gray-100 text-gray-500 border-gray-200' },
+};
 
-function StarRating({ rating }: { rating: number }) {
+function ReviewModal({ open, review, onClose }: { open: boolean; review: AdminReview | null; onClose: () => void }) {
+  if (!open || !review) return null;
   return (
-    <div className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map(s => (
-        <Star key={s} className={`w-3.5 h-3.5 ${s <= rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
-      ))}
-    </div>
+    <AnimatePresence>
+      <>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+          onClick={onClose} className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm" />
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
+          className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-2xl shadow-2xl z-50 overflow-hidden">
+          <div className="flex items-center justify-between p-5 border-b border-gray-100">
+            <h2 className="text-base font-bold">Review Detail</h2>
+            <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+          </div>
+          <div className="p-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white font-bold">
+                {review.customerName[0].toUpperCase()}
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900">{review.customerName}</p>
+                <p className="text-xs text-gray-400">{review.customerEmail}</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500">Product</p>
+              <p className="font-semibold text-sm text-gray-900">{review.productName}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map(i => (
+                <Star key={i} className={`w-4 h-4 ${i <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} />
+              ))}
+              <span className="text-sm font-bold text-gray-700 ml-1">{review.rating}/5</span>
+            </div>
+            {review.title && <p className="font-bold text-gray-900">{review.title}</p>}
+            <p className="text-sm text-gray-700 bg-gray-50 rounded-xl p-3">{review.body}</p>
+            <p className="text-xs text-gray-400">{new Date(review.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+          </div>
+        </motion.div>
+      </>
+    </AnimatePresence>
   );
 }
 
 export default function AdminReviewsPage() {
-  const [reviews, setReviews] = useState<ReviewRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState(''); // '' | 'pending' | 'approved'
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const { state, updateReview, deleteReview } = useAdminData();
+  const [filter, setFilter] = useState<'' | 'pending' | 'approved' | 'hidden'>('');
+  const [viewReview, setViewReview] = useState<AdminReview | null>(null);
+  const [toast, setToast] = useState('');
 
-  const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3000); };
+  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 2500); };
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const params = new URLSearchParams({ page: String(page) });
-    if (filter === 'pending') params.set('approved', 'false');
-    else if (filter === 'approved') params.set('approved', 'true');
-    const r = await fetch(`/api/admin/reviews?${params}`);
-    const d = await r.json();
-    setReviews(d.reviews ?? []);
-    setTotalPages(d.pagination?.totalPages ?? 1);
-    setLoading(false);
-  }, [page, filter]);
+  const reviews = filter ? state.reviews.filter(r => r.status === filter) : state.reviews;
 
-  useEffect(() => { load(); }, [load]);
-
-  const approveReview = async (id: string) => {
-    const r = await fetch(`/api/admin/reviews/${id}`, { method: 'PATCH' });
-    if (r.ok) { showToast('Review approved!'); load(); } else showToast('Failed', false);
-  };
-
-  const deleteReview = async () => {
-    if (!deleteId) return;
-    const r = await fetch(`/api/admin/reviews/${deleteId}`, { method: 'DELETE' });
-    if (r.ok) { showToast('Review deleted'); load(); } else showToast('Failed', false);
-    setDeleteId(null);
-  };
+  const pending = state.reviews.filter(r => r.status === 'pending').length;
+  const approved = state.reviews.filter(r => r.status === 'approved').length;
 
   return (
     <div className="space-y-5">
       <AnimatePresence>
         {toast && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold ${toast.ok ? 'bg-green-600' : 'bg-red-600'} text-white`}>
-            {toast.ok ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}{toast.msg}
+            className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold bg-green-600 text-white">
+            <Check className="w-4 h-4" />{toast}
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Reviews</h1>
-          <p className="text-sm text-gray-400">Moderate customer product reviews</p>
-        </div>
-        <div className="flex gap-2">
-          {[{ label: 'All', val: '' }, { label: 'Pending', val: 'pending' }, { label: 'Approved', val: 'approved' }].map(f => (
-            <button key={f.val} onClick={() => { setFilter(f.val); setPage(1); }}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                filter === f.val ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-              }`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Reviews</h1>
+        <p className="text-sm text-gray-400">{state.reviews.length} reviews · {pending} pending moderation</p>
       </div>
 
-      <div className="space-y-3">
-        {loading ? (
-          [...Array(5)].map((_, i) => <div key={i} className="h-28 bg-white rounded-2xl border border-gray-100 animate-pulse" />)
-        ) : reviews.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-20 text-center">
-            <Star className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-            <p className="text-gray-500 font-medium">No reviews found</p>
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: 'Total', value: state.reviews.length, color: 'text-gray-700 bg-gray-100' },
+          { label: 'Pending', value: pending, color: 'text-amber-700 bg-amber-50' },
+          { label: 'Approved', value: approved, color: 'text-green-700 bg-green-50' },
+        ].map(({ label, value, color }) => (
+          <div key={label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+            <p className="text-2xl font-bold text-gray-900">{value}</p>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${color}`}>{label}</span>
           </div>
-        ) : reviews.map(review => (
-          <motion.div
-            key={review.id}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${review.isApproved ? 'border-gray-100' : 'border-amber-200'}`}
-          >
-            <div className="p-5">
-              <div className="flex items-start gap-4">
-                {/* User */}
-                <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-sm overflow-hidden">
-                  {review.user.avatarUrl
-                    ? <img src={review.user.avatarUrl} alt={review.user.fullName} className="w-full h-full object-cover" />
-                    : review.user.fullName?.[0]?.toUpperCase() ?? 'U'
-                  }
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start justify-between gap-2 flex-wrap">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900">{review.user.fullName}</p>
-                      <p className="text-xs text-gray-400">{review.user.email}</p>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <StarRating rating={review.rating} />
-                      <span className="text-xs text-gray-400">{new Date(review.createdAt).toLocaleDateString('en-IN')}</span>
-                    </div>
-                  </div>
-
-                  {/* Product */}
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="w-7 h-7 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                      {review.product.imageUrl && <img src={review.product.imageUrl} alt={review.product.name} className="w-full h-full object-cover" />}
-                    </div>
-                    <p className="text-xs text-gray-600 font-medium">{review.product.name}</p>
-                    {review.isVerifiedPurchase && (
-                      <span className="text-[9px] bg-green-50 text-green-700 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
-                        <CheckCircle2 className="w-2.5 h-2.5" /> Verified
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Review content */}
-                  {review.title && <p className="text-sm font-bold text-gray-900 mt-2">{review.title}</p>}
-                  <p className={`text-sm text-gray-600 mt-1 ${expandedId === review.id ? '' : 'line-clamp-2'}`}>{review.body}</p>
-                  {review.body.length > 120 && (
-                    <button onClick={() => setExpandedId(expandedId === review.id ? null : review.id)}
-                      className="text-xs text-green-600 font-semibold mt-1 hover:underline">
-                      {expandedId === review.id ? 'Show less' : 'Read more'}
-                    </button>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-col gap-1.5 flex-shrink-0">
-                  {!review.isApproved && (
-                    <button onClick={() => approveReview(review.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 border border-green-200 rounded-xl text-xs font-semibold hover:bg-green-100 transition-colors whitespace-nowrap">
-                      <Check className="w-3.5 h-3.5" /> Approve
-                    </button>
-                  )}
-                  {review.isApproved && (
-                    <span className="flex items-center gap-1 text-xs text-green-600 font-semibold">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Approved
-                    </span>
-                  )}
-                  <a href={`/product/${review.product.slug}`} target="_blank" rel="noopener"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 text-gray-600 border border-gray-200 rounded-xl text-xs font-semibold hover:bg-gray-100 transition-colors">
-                    <Eye className="w-3.5 h-3.5" /> View
-                  </a>
-                  <button onClick={() => setDeleteId(review.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-xl text-xs font-semibold hover:bg-red-100 transition-colors">
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
         ))}
       </div>
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-3">
-          <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
-            className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-gray-50">
-            Previous
+      {/* Filter */}
+      <div className="flex gap-2">
+        {(['', 'pending', 'approved', 'hidden'] as const).map(s => (
+          <button key={s} onClick={() => setFilter(s)}
+            className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-colors ${filter === s ? 'bg-green-600 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+            {s || 'All'}
           </button>
-          <span className="text-sm text-gray-500">{page} / {totalPages}</span>
-          <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}
-            className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold disabled:opacity-40 hover:bg-gray-50">
-            Next
-          </button>
+        ))}
+      </div>
+
+      {reviews.length === 0 ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-16 text-center">
+          <Star className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+          <p className="text-sm font-semibold text-gray-500">No reviews {filter ? `with status "${filter}"` : 'yet'}</p>
+          <p className="text-xs text-gray-400 mt-1">Customer reviews will appear here after purchase</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {reviews.map(review => {
+            const cfg = STATUS_CONFIG[review.status];
+            return (
+              <motion.div key={review.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {review.customerName[0].toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-bold text-gray-900">{review.customerName}</p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.cls}`}>{cfg.label}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-1">{review.productName}</p>
+                    <div className="flex items-center gap-1 mb-2">
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <Star key={i} className={`w-3 h-3 ${i <= review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`} />
+                      ))}
+                    </div>
+                    {review.title && <p className="text-sm font-semibold text-gray-800 mb-0.5">{review.title}</p>}
+                    <p className="text-sm text-gray-600 line-clamp-2">{review.body}</p>
+                  </div>
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <button onClick={() => setViewReview(review)}
+                      className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500"><Eye className="w-4 h-4" /></button>
+                    {review.status !== 'approved' && (
+                      <button onClick={() => { updateReview(review.id, { status: 'approved' }); showToast('Review approved!'); }}
+                        className="p-1.5 hover:bg-green-50 rounded-lg text-green-600"><CheckCircle2 className="w-4 h-4" /></button>
+                    )}
+                    {review.status !== 'hidden' && (
+                      <button onClick={() => { updateReview(review.id, { status: 'hidden' }); showToast('Review hidden'); }}
+                        className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500"><EyeOff className="w-4 h-4" /></button>
+                    )}
+                    <button onClick={() => { deleteReview(review.id); showToast('Review deleted'); }}
+                      className="p-1.5 hover:bg-red-50 rounded-lg text-red-500"><Trash2 className="w-4 h-4" /></button>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
-      {/* Delete confirm */}
-      <AnimatePresence>
-        {deleteId && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeleteId(null)} className="fixed inset-0 bg-black/40 z-40" />
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-xl z-50 p-6 w-full max-w-sm text-center">
-              <p className="font-bold text-gray-900 mb-2">Delete Review?</p>
-              <p className="text-sm text-gray-500 mb-5">This review will be permanently removed.</p>
-              <div className="flex gap-3">
-                <button onClick={() => setDeleteId(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold">Cancel</button>
-                <button onClick={deleteReview} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold">Delete</button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      <ReviewModal open={!!viewReview} review={viewReview} onClose={() => setViewReview(null)} />
     </div>
   );
 }

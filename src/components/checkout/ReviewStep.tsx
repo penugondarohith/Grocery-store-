@@ -9,6 +9,7 @@ import { useAuthContext } from '@/context/AuthContext';
 import { useNotifications } from '@/context/NotificationContext';
 import { formatPrice } from '@/lib/utils';
 import { createOrder, generateOrderNumber } from '@/services/orderService';
+import { saveOrderLocally } from '@/services/localOrderService';
 import { Order, OrderItem } from '@/types/checkout';
 import { useRouter } from 'next/navigation';
 
@@ -79,11 +80,30 @@ export default function ReviewStep() {
 
       let createdOrder: Order;
       if (user) {
-        createdOrder = await createOrder(orderPayload);
+        try {
+          createdOrder = await createOrder(orderPayload);
+        } catch {
+          // Supabase failed (DB not configured) — fall back to local-only order
+          createdOrder = {
+            ...orderPayload,
+            id: `local-${Date.now()}`,
+            order_number: orderNumber,
+            created_at: new Date().toISOString(),
+          };
+        }
       } else {
         // Guest: generate local order
-        createdOrder = { ...orderPayload, id: `guest-${Date.now()}`, order_number: orderNumber };
+        createdOrder = {
+          ...orderPayload,
+          id: `guest-${Date.now()}`,
+          order_number: orderNumber,
+          created_at: new Date().toISOString(),
+        };
       }
+
+      // Always persist locally so /orders page can display this order
+      // regardless of whether Supabase or Prisma is available
+      saveOrderLocally({ ...createdOrder, created_at: createdOrder.created_at ?? new Date().toISOString() });
 
       // Notify admin
       addOrderNotification({

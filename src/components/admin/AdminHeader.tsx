@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { Bell, Search } from 'lucide-react';
 import { useNotifications } from '@/context/NotificationContext';
 import { useAuthContext } from '@/context/AuthContext';
+import { useAdminData } from '@/context/AdminDataContext';
 import Link from 'next/link';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -18,14 +19,21 @@ const PAGE_TITLES: Record<string, string> = {
   '/admin/notifications': 'Notifications',
   '/admin/reviews': 'Reviews',
   '/admin/settings': 'Settings',
+  '/admin/categories': 'Categories',
+  '/admin/payments': 'Payments',
+  '/admin/activity': 'Activity Log',
+  '/admin/content': 'Content',
+  '/admin/login': 'Admin Login',
 };
 
 export default function AdminHeader() {
   const pathname = usePathname();
   const { unreadCount } = useNotifications();
   const { user } = useAuthContext();
+  const { isAdminBypass } = useAdminData();
 
   const title = Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] ?? 'Admin';
+  const avatarLetter = isAdminBypass ? 'A' : (user?.email?.[0]?.toUpperCase() ?? 'A');
 
   return (
     <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 sm:px-6 py-3 flex items-center justify-between">
@@ -58,7 +66,7 @@ export default function AdminHeader() {
 
         {/* Admin avatar */}
         <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm">
-          {user?.email?.[0]?.toUpperCase() ?? 'A'}
+          {avatarLetter}
         </div>
       </div>
     </header>

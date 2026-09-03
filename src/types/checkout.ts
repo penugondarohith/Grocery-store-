@@ -61,6 +61,7 @@ export interface Order {
   address: Partial<Address>;
   items: OrderItem[];
   created_at?: string;
+  updated_at?: string;
 }
 
 export type CheckoutStep = 1 | 2 | 3 | 4;

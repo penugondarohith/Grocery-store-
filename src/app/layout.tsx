@@ -4,6 +4,7 @@ import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { AdminDataProvider } from "@/context/AdminDataContext";
 import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -40,20 +41,22 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AuthProvider>
-          <NotificationProvider>
-            <CartProvider>
-              <WishlistProvider>
-                <ConditionalShell
-                  navbar={<><AnnouncementBar /><Navbar /></>}
-                  footer={<Footer />}
-                >
-                  {children}
-                </ConditionalShell>
-              </WishlistProvider>
-            </CartProvider>
-          </NotificationProvider>
-        </AuthProvider>
+        <AdminDataProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <CartProvider>
+                <WishlistProvider>
+                  <ConditionalShell
+                    navbar={<><AnnouncementBar /><Navbar /></>}
+                    footer={<Footer />}
+                  >
+                    {children}
+                  </ConditionalShell>
+                </WishlistProvider>
+              </CartProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </AdminDataProvider>
       </body>
     </html>
   );

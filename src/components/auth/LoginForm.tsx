@@ -54,7 +54,8 @@ export default function LoginForm() {
       );
       return;
     }
-    router.push('/dashboard');
+    const redirectTo = searchParams.get('redirect') ?? '/dashboard';
+    router.push(redirectTo);
   };
 
   const handleGoogle = async () => {

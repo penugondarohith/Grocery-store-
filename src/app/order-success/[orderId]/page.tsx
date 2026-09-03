@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Check, Truck, Package, Home, FileText, Loader2 } from 'lucide-react';
 import { Order } from '@/types/checkout';
 import { getOrderById } from '@/services/orderService';
+import { getLocalOrderById } from '@/services/localOrderService';
 import { useAuthContext } from '@/context/AuthContext';
 import { formatPrice } from '@/lib/utils';
 
@@ -22,8 +23,22 @@ function OrderSuccessContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (orderId && user) {
-      getOrderById(orderId).then((o) => { setOrder(o); setLoading(false); }).catch(() => setLoading(false));
+    if (!orderId) { setLoading(false); return; }
+
+    // Always try localStorage first (works for guests and as fallback)
+    const localOrder = getLocalOrderById(orderId);
+    if (localOrder) {
+      setOrder(localOrder);
+      setLoading(false);
+      return;
+    }
+
+    // Try Supabase if user is authenticated
+    if (user) {
+      getOrderById(orderId)
+        .then((o) => { if (o) setOrder(o); })
+        .catch(() => {})
+        .finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
@@ -141,12 +156,18 @@ function OrderSuccessContent() {
               <Home className="w-4 h-4" /> Continue Shopping
             </Link>
             <Link
-              href="/dashboard?tab=orders"
+              href={`/orders/${orderId}`}
               className="flex items-center justify-center gap-2 py-3.5 bg-green-600 text-white font-bold rounded-2xl text-sm hover:bg-green-700 transition-colors"
             >
-              <Package className="w-4 h-4" /> View Orders
+              <Truck className="w-4 h-4" /> Track Order
             </Link>
           </div>
+          <Link
+            href="/orders"
+            className="w-full flex items-center justify-center gap-2 py-3 border border-gray-200 text-gray-600 font-semibold text-sm rounded-2xl hover:bg-gray-50 transition-colors mb-3"
+          >
+            <Package className="w-4 h-4" /> View All Orders
+          </Link>
 
           {/* Download invoice (print-ready) */}
           <button

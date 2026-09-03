@@ -1,163 +1,138 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, Check, Settings, RefreshCw } from 'lucide-react';
-
-interface Setting {
-  key: string;
-  value: string;
-  label: string | null;
-}
-
-const GROUPS: { title: string; keys: string[] }[] = [
-  { title: 'Store Information', keys: ['store_name', 'store_email', 'store_phone', 'store_address', 'currency'] },
-  { title: 'Pricing & Delivery', keys: ['delivery_fee', 'free_delivery_threshold', 'min_order_amount', 'tax_rate'] },
-  { title: 'Notifications', keys: ['low_stock_notification', 'order_notification'] },
-];
-
-const BOOLEAN_KEYS = ['low_stock_notification', 'order_notification'];
+import { Settings, Check, Store, Truck, CreditCard, Clock, Save } from 'lucide-react';
+import { useAdminData } from '@/context/AdminDataContext';
 
 export default function AdminSettingsPage() {
-  const [settings, setSettings] = useState<Setting[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const { state, updateSettings } = useAdminData();
+  const [form, setForm] = useState({ ...state.settings });
+  const [saved, setSaved] = useState(false);
 
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+  const f = (key: string, val: string | number | boolean) => setForm(prev => ({ ...prev, [key]: val }));
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const r = await fetch('/api/admin/settings');
-    const d = await r.json();
-    setSettings(d.settings ?? []);
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const get = (key: string) => settings.find(s => s.key === key)?.value ?? '';
-  const set = (key: string, value: string) => {
-    setSettings(prev =>
-      prev.some(s => s.key === key)
-        ? prev.map(s => s.key === key ? { ...s, value } : s)
-        : [...prev, { key, value, label: key.replace(/_/g, ' ') }]
-    );
+  const handleSave = () => {
+    updateSettings(form);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   };
 
-  const save = async () => {
-    setSaving(true);
-    const r = await fetch('/api/admin/settings', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ settings }),
-    });
-    setSaving(false);
-    if (r.ok) showToast('Settings saved!');
-    else showToast('Failed to save');
-  };
+  const Section = ({ title, icon: Icon, children }: { title: string; icon: React.ElementType; children: React.ReactNode }) => (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-50 flex items-center gap-2">
+        <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
+          <Icon className="w-4 h-4 text-green-600" />
+        </div>
+        <h3 className="font-bold text-gray-900 text-sm">{title}</h3>
+      </div>
+      <div className="p-5 space-y-4">{children}</div>
+    </div>
+  );
 
-  const getLabel = (key: string) => settings.find(s => s.key === key)?.label ?? key.replace(/_/g, ' ');
+  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <label className="text-xs font-semibold text-gray-600 block mb-1">{label}</label>
+      {children}
+    </div>
+  );
+
+  const Input = ({ value, onChange, type = 'text', placeholder = '' }: { value: string | number; onChange: (v: string) => void; type?: string; placeholder?: string }) => (
+    <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+      className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+  );
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="space-y-5 max-w-2xl">
       <AnimatePresence>
-        {toast && (
+        {saved && (
           <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-semibold bg-green-600 text-white">
-            <Check className="w-4 h-4" />{toast}
+            <Check className="w-4 h-4" /> Settings saved!
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between">
+      <div>
+        <h1 className="text-xl font-bold text-gray-900">Store Settings</h1>
+        <p className="text-sm text-gray-400">Configure your store settings</p>
+      </div>
+
+      {/* Store Open/Closed Banner */}
+      <div className={`rounded-2xl p-4 border flex items-center justify-between ${form.isOpen ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Settings</h1>
-          <p className="text-sm text-gray-400">Configure your store settings</p>
+          <p className={`font-bold text-sm ${form.isOpen ? 'text-green-800' : 'text-red-700'}`}>
+            Store is currently {form.isOpen ? 'OPEN' : 'CLOSED'}
+          </p>
+          <p className={`text-xs mt-0.5 ${form.isOpen ? 'text-green-600' : 'text-red-500'}`}>
+            {form.isOpen ? 'Customers can place orders' : 'No new orders will be accepted'}
+          </p>
         </div>
-        <div className="flex gap-2">
-          <button onClick={load} className="p-2.5 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-gray-500">
-            <RefreshCw className="w-4 h-4" />
-          </button>
-          <button onClick={save} disabled={saving}
-            className="flex items-center gap-2 px-4 py-2.5 bg-green-600 text-white font-bold text-sm rounded-xl hover:bg-green-700 disabled:opacity-60 shadow-sm shadow-green-200">
-            <Save className="w-4 h-4" />
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
+        <button onClick={() => f('isOpen', !form.isOpen)}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${form.isOpen ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-600 text-white hover:bg-green-700'}`}>
+          {form.isOpen ? 'Close Store' : 'Open Store'}
+        </button>
       </div>
 
-      {loading ? (
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => <div key={i} className="h-40 bg-white rounded-2xl border border-gray-100 animate-pulse" />)}
+      <Section title="Store Information" icon={Store}>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <Field label="Store Name"><Input value={form.storeName} onChange={v => f('storeName', v)} /></Field>
+          </div>
+          <div className="col-span-2">
+            <Field label="Tagline"><Input value={form.tagline} onChange={v => f('tagline', v)} /></Field>
+          </div>
+          <Field label="Contact Phone"><Input value={form.contactPhone} onChange={v => f('contactPhone', v)} /></Field>
+          <Field label="Contact Email"><Input value={form.contactEmail} onChange={v => f('contactEmail', v)} type="email" /></Field>
+          <div className="col-span-2">
+            <Field label="Address"><Input value={form.address} onChange={v => f('address', v)} /></Field>
+          </div>
         </div>
-      ) : settings.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm py-20 text-center">
-          <Settings className="w-10 h-10 mx-auto mb-3 text-gray-300" />
-          <p className="text-gray-500">No settings found. Configure your DATABASE_URL first.</p>
-        </div>
-      ) : (
-        GROUPS.map(group => {
-          const groupSettings = group.keys.filter(k => !settings.length || true); // show all
-          return (
-            <div key={group.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-gray-50 bg-gray-50/50">
-                <h2 className="text-sm font-bold text-gray-700">{group.title}</h2>
-              </div>
-              <div className="p-5 space-y-4">
-                {groupSettings.map(key => {
-                  const isBoolean = BOOLEAN_KEYS.includes(key);
-                  const val = get(key);
-                  const label = getLabel(key);
+      </Section>
 
-                  return (
-                    <div key={key} className="flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <label className="text-sm font-semibold text-gray-700 capitalize">{label}</label>
-                        <p className="text-xs text-gray-400 font-mono">{key}</p>
-                      </div>
-                      {isBoolean ? (
-                        <div
-                          onClick={() => set(key, val === 'true' ? 'false' : 'true')}
-                          className={`w-10 h-6 rounded-full transition-colors flex items-center px-0.5 cursor-pointer flex-shrink-0 ${val === 'true' ? 'bg-green-600' : 'bg-gray-200'}`}
-                        >
-                          <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${val === 'true' ? 'translate-x-4' : ''}`} />
-                        </div>
-                      ) : (
-                        <input
-                          value={val}
-                          onChange={e => set(key, e.target.value)}
-                          className="w-48 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500 text-right"
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })
-      )}
+      <Section title="Operating Hours" icon={Clock}>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Opening Time">
+            <Input type="time" value={form.openingHours} onChange={v => f('openingHours', v)} />
+          </Field>
+          <Field label="Closing Time">
+            <Input type="time" value={form.closingHours} onChange={v => f('closingHours', v)} />
+          </Field>
+        </div>
+      </Section>
 
-      {/* Danger zone */}
-      <div className="bg-white rounded-2xl border border-red-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-red-50 bg-red-50/50">
-          <h2 className="text-sm font-bold text-red-700">System Info</h2>
+      <Section title="Delivery Settings" icon={Truck}>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Standard Delivery Fee (₹)">
+            <Input type="number" value={form.deliveryFee} onChange={v => f('deliveryFee', Number(v))} />
+          </Field>
+          <Field label="Free Delivery Above (₹)">
+            <Input type="number" value={form.freeDeliveryThreshold} onChange={v => f('freeDeliveryThreshold', Number(v))} />
+          </Field>
+          <Field label="Express Delivery Fee (₹)">
+            <Input type="number" value={form.expressDeliveryFee} onChange={v => f('expressDeliveryFee', Number(v))} />
+          </Field>
+          <Field label="Minimum Order Value (₹)">
+            <Input type="number" value={form.minOrderValue} onChange={v => f('minOrderValue', Number(v))} />
+          </Field>
         </div>
-        <div className="p-5 space-y-3">
-          {[
-            { label: 'Next.js Version', value: '16.x (App Router)' },
-            { label: 'Backend', value: 'Express + Prisma v5' },
-            { label: 'Database', value: 'PostgreSQL (Supabase)' },
-            { label: 'Auth', value: 'Supabase Auth + JWT' },
-          ].map(({ label, value }) => (
-            <div key={label} className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">{label}</span>
-              <span className="text-sm font-mono font-semibold text-gray-900">{value}</span>
-            </div>
-          ))}
+      </Section>
+
+      <Section title="Payment & Tax" icon={CreditCard}>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="GST (%)">
+            <Input type="number" value={form.gstPercent} onChange={v => f('gstPercent', Number(v))} />
+          </Field>
+          <Field label="COD Fee (₹)">
+            <Input type="number" value={form.codFee} onChange={v => f('codFee', Number(v))} />
+          </Field>
         </div>
-      </div>
+      </Section>
+
+      <button onClick={handleSave}
+        className="w-full py-3.5 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 flex items-center justify-center gap-2 shadow-lg shadow-green-200 transition-all">
+        <Save className="w-4 h-4" /> Save All Settings
+      </button>
     </div>
   );
 }

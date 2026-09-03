@@ -1,21 +1,31 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuthContext } from '@/context/AuthContext';
+import { useAdminData } from '@/context/AdminDataContext';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { isAdmin, loading } = useAuthContext();
+  const { isAdminBypass } = useAdminData();
   const router = useRouter();
+  const pathname = usePathname();
+
+  const isLoginPage = pathname === '/admin/login';
+  const canAccess = isAdmin || isAdminBypass;
 
   useEffect(() => {
-    if (!loading && !isAdmin) {
-      router.replace('/');
+    if (!isLoginPage && !loading && !canAccess) {
+      router.replace('/admin/login');
     }
-  }, [isAdmin, loading, router]);
+  }, [canAccess, loading, router, isLoginPage]);
 
+  // Login page: render without sidebar/header
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -27,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (!isAdmin) return null;
+  if (!canAccess) return null;
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
