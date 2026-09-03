@@ -105,7 +105,7 @@ export default function AddressStep() {
         if (editingId) {
           const updated = await updateAddress(editingId, user.id, form);
           setAddresses((prev) => prev.map((a) => a.id === editingId ? updated : a));
-          if (selectedAddress?.id === editingId) setAddress(updated);
+          setAddress(updated);
         } else {
           const newAddr = await addAddress({ ...form, user_id: user.id });
           setAddresses((prev) => [newAddr, ...prev]);
@@ -118,6 +118,8 @@ export default function AddressStep() {
       }
       setShowForm(false);
       setEditingId(null);
+      // Automatically proceed to the delivery step after saving
+      nextStep();
     } catch (e) {
       console.error(e);
     } finally {
@@ -258,7 +260,7 @@ export default function AddressStep() {
                   </label>
                   <button onClick={handleSave} disabled={saving}
                     className="w-full py-3 bg-green-600 text-white font-bold text-sm rounded-xl hover:bg-green-700 transition-colors disabled:opacity-75 flex items-center justify-center gap-2">
-                    {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : 'Save Address'}
+                    {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : editingId ? 'Update Address' : 'Save & Continue →'}
                   </button>
                 </div>
               </motion.div>
