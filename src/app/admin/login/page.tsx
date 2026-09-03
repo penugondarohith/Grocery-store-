@@ -7,9 +7,9 @@ import { Leaf, Lock, Eye, EyeOff, AlertCircle, ShieldCheck } from 'lucide-react'
 import { useAuthContext } from '@/context/AuthContext';
 import { useAdminData } from '@/context/AdminDataContext';
 
-// ─── Dev credentials ──────────────────────────────────────────────────────
-const DEV_EMAIL = 'admin@vlgs.store';
-const DEV_PASSWORD = 'admin123';
+// ─── Public-facing demo hint (set NEXT_PUBLIC_ADMIN_EMAIL in Vercel env) ──────
+const HINT_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL ?? 'admin@vlgs.store';
+const HINT_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD ?? 'admin123';
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -34,8 +34,14 @@ export default function AdminLoginPage() {
     setSubmitting(true);
 
     try {
-      // ── Dev bypass ──────────────────────────────────────────────────────
-      if (email.trim().toLowerCase() === DEV_EMAIL && password === DEV_PASSWORD) {
+      // ── Server-side bypass check (reads from ADMIN_BYPASS_EMAIL / ADMIN_BYPASS_PASSWORD env vars) ──
+      const res = await fetch('/api/admin/verify-bypass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+
+      if (res.ok) {
         enableAdminBypass();
         router.replace('/admin/dashboard');
         return;
@@ -44,12 +50,10 @@ export default function AdminLoginPage() {
       // ── Real Supabase auth ──────────────────────────────────────────────
       const { error: authError } = await signInWithEmail(email, password);
       if (authError) {
-        setError('Invalid credentials. Try admin@vlgs.store / admin123 for demo.');
+        setError('Invalid credentials. Use the admin email and password configured in your environment.');
         return;
       }
 
-      // Check admin role after sign-in
-      // isAdmin will update via AuthContext listener
       router.replace('/admin/dashboard');
     } catch {
       setError('Something went wrong. Please try again.');
@@ -59,8 +63,8 @@ export default function AdminLoginPage() {
   };
 
   const fillDemoCredentials = () => {
-    setEmail(DEV_EMAIL);
-    setPassword(DEV_PASSWORD);
+    setEmail(HINT_EMAIL);
+    setPassword(HINT_PASSWORD);
     setError('');
   };
 
@@ -106,9 +110,9 @@ export default function AdminLoginPage() {
           <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-3 mb-5 flex items-start gap-2">
             <ShieldCheck className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <p className="text-xs text-green-300 font-semibold">Demo Mode Available</p>
+              <p className="text-xs text-green-300 font-semibold">Admin Access</p>
               <p className="text-[11px] text-green-400 mt-0.5">
-                Use <code className="bg-green-900/40 px-1 rounded">admin@vlgs.store</code> / <code className="bg-green-900/40 px-1 rounded">admin123</code>
+                Use <code className="bg-green-900/40 px-1 rounded">{HINT_EMAIL}</code> and your admin password
               </p>
             </div>
             <button
