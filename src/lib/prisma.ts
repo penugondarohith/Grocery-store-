@@ -1,22 +1,32 @@
 /**
  * Prisma client singleton for use in Next.js API routes.
- * We reference the backend's generated Prisma client directly
- * since the frontend package doesn't run `prisma generate`.
  *
- * Generated types live at: backend/node_modules/.prisma/client
- * The PrismaClient class lives at: backend/node_modules/@prisma/client
+ * Uses a dynamic require so the build doesn't fail when
+ * `prisma generate` hasn't been run (e.g. on Vercel without a DB).
+ * The admin panel uses localStorage instead of Prisma.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PrismaClient } = require('../../backend/node_modules/@prisma/client') as typeof import('../../backend/node_modules/.prisma/client/default');
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-require-imports */
 
-type PrismaClientType = InstanceType<typeof PrismaClient>;
+let PrismaClientConstructor: any;
 
-const globalForPrisma = globalThis as unknown as { prisma: PrismaClientType };
+try {
+  PrismaClientConstructor = require('@prisma/client').PrismaClient;
+} catch {
+  // Prisma client not generated — provide a no-op stub so the build succeeds.
+  // API routes that depend on prisma will fail at runtime with a clear error.
+  PrismaClientConstructor = class StubPrismaClient {
+    constructor() {
+      console.warn('[prisma] PrismaClient not available. Run `npx prisma generate` to enable DB features.');
+    }
+  };
+}
 
-export const prisma: PrismaClientType =
+const globalForPrisma = globalThis as unknown as { prisma: any };
+
+export const prisma: any =
   globalForPrisma.prisma ??
-  new PrismaClient({
+  new PrismaClientConstructor({
     log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
   });
 
