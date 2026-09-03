@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Plus, Pencil, Trash2, Star, Check, X, Loader2 } from 'lucide-react';
 import { Address } from '@/types/checkout';
@@ -27,6 +27,31 @@ function validateForm(form: typeof EMPTY_FORM): FormErrors {
   if (!form.state) err.state = 'State is required';
   if (!/^\d{6}$/.test(form.pincode)) err.pincode = 'Enter valid 6-digit pincode';
   return err;
+}
+
+// ─── Input field component defined OUTSIDE the main component ────────────
+// This prevents React from re-creating the component on every render,
+// which was causing input focus loss ("can only type one character at a time").
+function FormField({
+  label, value, error, type = 'text', placeholder = '',
+  onChange,
+}: {
+  label: string; value: string; error?: string; type?: string; placeholder?: string;
+  onChange: (val: string) => void;
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${error ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
+      />
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
 }
 
 export default function AddressStep() {
@@ -64,6 +89,12 @@ export default function AddressStep() {
     setEditingId(id);
     setShowForm(true);
   };
+
+  // Stable field updater to avoid re-creating callbacks
+  const updateField = useCallback((field: string, value: string) => {
+    setForm((f) => ({ ...f, [field]: value }));
+    setErrors((er) => ({ ...er, [field]: '' }));
+  }, []);
 
   const handleSave = async () => {
     const errs = validateForm(form);
@@ -111,21 +142,8 @@ export default function AddressStep() {
     setAddresses((prev) => prev.map((a) => ({ ...a, is_default: a.id === id })));
   };
 
-  const Field = ({ label, field, type = 'text', placeholder = '' }: { label: string; field: keyof typeof EMPTY_FORM; type?: string; placeholder?: string }) => (
-    <div>
-      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
-      <input
-        type={type}
-        value={form[field] as string}
-        onChange={(e) => { setForm((f) => ({ ...f, [field]: e.target.value })); setErrors((er) => ({ ...er, [field]: '' })); }}
-        placeholder={placeholder}
-        className={`w-full px-3 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors ${errors[field] ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
-      />
-      {errors[field] && <p className="text-xs text-red-500 mt-1">{errors[field]}</p>}
-    </div>
-  );
-
-  const canProceed = !!selectedAddress || (!user && showForm);
+  // ── "Continue to Delivery" should be enabled if an address is selected ──
+  const canProceed = !!selectedAddress;
 
   return (
     <div>
@@ -208,20 +226,20 @@ export default function AddressStep() {
                     )}
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Field label="Full Name *" field="name" placeholder="Lakshmi Narayana" />
-                    <Field label="Phone Number *" field="phone" type="tel" placeholder="9876543210" />
+                    <FormField label="Full Name *" value={form.name} error={errors.name} placeholder="Lakshmi Narayana" onChange={(v) => updateField('name', v)} />
+                    <FormField label="Phone Number *" value={form.phone} error={errors.phone} type="tel" placeholder="9876543210" onChange={(v) => updateField('phone', v)} />
                     <div className="sm:col-span-2">
-                      <Field label="Address Line *" field="address_line" placeholder="House/Flat No, Street, Colony" />
+                      <FormField label="Address Line *" value={form.address_line} error={errors.address_line} placeholder="House/Flat No, Street, Colony" onChange={(v) => updateField('address_line', v)} />
                     </div>
-                    <Field label="City *" field="city" placeholder="Penamaluru" />
+                    <FormField label="City *" value={form.city} error={errors.city} placeholder="Penamaluru" onChange={(v) => updateField('city', v)} />
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1">State *</label>
-                      <select value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
+                      <select value={form.state} onChange={(e) => updateField('state', e.target.value)}
                         className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
                         {STATES.map((s) => <option key={s}>{s}</option>)}
                       </select>
                     </div>
-                    <Field label="Pincode *" field="pincode" placeholder="521137" />
+                    <FormField label="Pincode *" value={form.pincode} error={errors.pincode} placeholder="521137" onChange={(v) => updateField('pincode', v)} />
                     <div>
                       <label className="block text-xs font-semibold text-gray-600 mb-1">Address Type</label>
                       <div className="flex gap-2">
@@ -249,10 +267,10 @@ export default function AddressStep() {
         </div>
       )}
 
-      {/* Proceed button */}
+      {/* Proceed button — enabled as soon as an address is selected/saved */}
       <button
         onClick={nextStep}
-        disabled={!selectedAddress && !(form.name && !showForm)}
+        disabled={!canProceed}
         className="w-full mt-5 py-3.5 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Continue to Delivery →
