@@ -55,3 +55,11 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type SignupInput = z.infer<typeof signupSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const otpSchema = z.object({
+  code: z
+    .string()
+    .length(6, 'Enter the 6-digit code from your email')
+    .regex(/^\d{6}$/, 'Code must be 6 digits'),
+});
+export type OtpInput = z.infer<typeof otpSchema>;

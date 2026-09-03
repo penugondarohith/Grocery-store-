@@ -93,17 +93,19 @@ export function FormField({ label, id, error, children }: FormFieldProps) {
 
 export function SubmitButton({
   loading,
+  disabled,
   children,
 }: {
   loading?: boolean;
+  disabled?: boolean;
   children: ReactNode;
 }) {
   return (
     <motion.button
       type="submit"
-      disabled={loading}
-      whileHover={{ scale: loading ? 1 : 1.01 }}
-      whileTap={{ scale: loading ? 1 : 0.97 }}
+      disabled={loading || disabled}
+      whileHover={{ scale: (loading || disabled) ? 1 : 1.01 }}
+      whileTap={{ scale: (loading || disabled) ? 1 : 0.97 }}
       className="w-full py-3.5 px-4 rounded-xl font-semibold text-sm text-white
         bg-gradient-to-r from-green-600 to-emerald-600
         hover:from-green-700 hover:to-emerald-700

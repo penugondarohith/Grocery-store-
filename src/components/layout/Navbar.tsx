@@ -103,7 +103,7 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="/dashboard?tab=orders"
+              href="/orders"
               className="flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-green-50 hover:text-green-700 transition-colors"
             >
               <Package className="w-4 h-4" /> Orders
@@ -114,7 +114,7 @@ export default function Navbar() {
           <div className="flex items-center gap-1">
             {/* Wishlist */}
             <Link
-              href="/dashboard?tab=wishlist"
+              href="/wishlist"
               className="relative p-2 rounded-xl hover:bg-rose-50 transition-colors group"
               aria-label="Wishlist"
             >
@@ -150,7 +150,7 @@ export default function Navbar() {
               user ? (
                 <div className="hidden sm:flex items-center gap-2 ml-1">
                   <Link
-                    href="/dashboard"
+                    href="/account"
                     className="flex items-center gap-2 px-3 py-1.5 rounded-xl hover:bg-green-50 transition-colors"
                   >
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold">
@@ -228,12 +228,15 @@ export default function Navbar() {
               <Link href="/#deals" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
                 🔥 Offers
               </Link>
-              <Link href="/dashboard?tab=orders" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
+              <Link href="/orders" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
                 📦 My Orders
+              </Link>
+              <Link href="/wishlist" className="px-3 py-2.5 text-sm font-medium text-gray-700" onClick={() => setMobileOpen(false)}>
+                ❤️ Wishlist
               </Link>
               {user ? (
                 <>
-                  <Link href="/dashboard" className="px-3 py-2.5 text-sm font-semibold text-green-700" onClick={() => setMobileOpen(false)}>
+                  <Link href="/account" className="px-3 py-2.5 text-sm font-semibold text-green-700" onClick={() => setMobileOpen(false)}>
                     👤 {displayName}
                   </Link>
                   <button onClick={() => { signOut(); setMobileOpen(false); }} className="px-3 py-2.5 text-sm font-medium text-red-600 text-left">

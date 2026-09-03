@@ -31,6 +31,10 @@ interface AuthContextValue extends AuthState {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (password: string) => Promise<{ error: string | null }>;
+  /** Send a 6-digit OTP to the given email (uses Supabase signInWithOtp) */
+  sendOtp: (email: string) => Promise<{ error: string | null }>;
+  /** Verify the OTP — establishes a session on success */
+  verifyOtp: (email: string, token: string) => Promise<{ error: string | null }>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -134,6 +138,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: null };
   };
 
+  const sendOtp = async (email: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: false, // Only send OTP to existing accounts
+      },
+    });
+    if (error) return { error: error.message };
+    return { error: null };
+  };
+
+  const verifyOtp = async (email: string, token: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    });
+    if (error) return { error: error.message };
+    return { error: null };
+  };
+
   const updatePassword = async (password: string): Promise<{ error: string | null }> => {
     const { error } = await supabase.auth.updateUser({ password });
     if (error) return { error: error.message };
@@ -150,6 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         resetPassword,
         updatePassword,
+        sendOtp,
+        verifyOtp,
       }}
     >
       {children}

@@ -17,8 +17,8 @@ import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice } from "@/lib/utils";
 import { notFound } from "next/navigation";
 
-export default function ProductPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug: id } = use(params);
   const product = getProductById(id);
   if (!product) return notFound();
 

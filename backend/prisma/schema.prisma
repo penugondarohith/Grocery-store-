@@ -216,6 +216,7 @@ model ProductVariant {
   inventory  Inventory?
   cartItems  CartItem[]
   orderItems OrderItem[]
+  inventoryLogs InventoryLog[]
 
   @@unique([productId, name])
   @@map("product_variants")
@@ -484,4 +485,30 @@ model ProductOffer {
 
   @@unique([productId, offerId])
   @@map("product_offers")
+}
+
+model StoreSettings {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key       String   @unique
+  value     String
+  label     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@map("store_settings")
+}
+
+model InventoryLog {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  productVariantId String   @map("product_variant_id") @db.Uuid
+  previousQuantity Int      @map("previous_quantity")
+  newQuantity      Int      @map("new_quantity")
+  changeAmount     Int      @map("change_amount")
+  reason           String?
+  performedBy      String?  @map("performed_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_logs")
 }

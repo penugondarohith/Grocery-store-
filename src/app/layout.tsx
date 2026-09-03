@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import AnnouncementBar from "@/components/layout/AnnouncementBar";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import ConditionalShell from "@/components/layout/ConditionalShell";
 
 export const metadata: Metadata = {
   title: {
@@ -43,10 +44,12 @@ export default function RootLayout({
           <NotificationProvider>
             <CartProvider>
               <WishlistProvider>
-                <AnnouncementBar />
-                <Navbar />
-                <main id="main-content">{children}</main>
-                <Footer />
+                <ConditionalShell
+                  navbar={<><AnnouncementBar /><Navbar /></>}
+                  footer={<Footer />}
+                >
+                  {children}
+                </ConditionalShell>
               </WishlistProvider>
             </CartProvider>
           </NotificationProvider>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { loginSchema, LoginInput } from '@/schemas/auth.schema';
@@ -29,6 +29,8 @@ const GoogleIcon = () => (
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const passwordResetSuccess = searchParams.get('message') === 'password_reset_success';
   const { signInWithEmail, signInWithGoogle } = useAuthContext();
   const [serverError, setServerError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -90,6 +92,16 @@ export default function LoginForm() {
       </div>
 
       <AuthDivider text="or sign in with email" />
+
+      {/* Password reset success banner */}
+      <AnimatePresence>
+        {passwordResetSuccess && (
+          <AlertBanner
+            type="success"
+            message="Password updated! Sign in with your new password."
+          />
+        )}
+      </AnimatePresence>
 
       {/* Error banner */}
       <AnimatePresence>
