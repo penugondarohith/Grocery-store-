@@ -8,6 +8,7 @@ import { Heart, ShoppingCart, Star, Check, Eye } from "lucide-react";
 import { Product } from "@/data/products";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useAdminData } from "@/context/AdminDataContext";
 import { formatPrice } from "@/lib/utils";
 
 interface ProductCardProps {
@@ -18,12 +19,22 @@ interface ProductCardProps {
 export default function ProductCard({ product, className = "" }: ProductCardProps) {
   const { addItem, getItemQuantity, updateQuantity } = useCart();
   const { toggleItem, isWishlisted } = useWishlist();
+  const { getProductOverride } = useAdminData();
   const [justAdded, setJustAdded] = useState(false);
-  const qty = getItemQuantity(product.id);
+  const override = getProductOverride(product.id);
+  const displayProduct = override ? {
+    ...product,
+    name: override.name ?? product.name,
+    price: override.price ?? product.price,
+    originalPrice: override.originalPrice ?? product.originalPrice,
+    image: override.image ?? product.image,
+    inStock: override.inStock ?? product.inStock,
+  } : product;
+  const qty = getItemQuantity(displayProduct.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
-    addItem(product);
+    addItem(displayProduct);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
   };
@@ -36,12 +47,12 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
       transition={{ duration: 0.25 }}
       className={`bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group hover:shadow-md transition-shadow ${className}`}
     >
-      <Link href={`/product/${product.id}`} className="block">
+      <Link href={`/product/${displayProduct.id}`} className="block">
         {/* Image */}
         <div className="relative h-44 bg-gray-50 overflow-hidden">
           <img
-            src={product.image}
-            alt={product.name}
+            src={displayProduct.image}
+            alt={displayProduct.name}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
 
@@ -53,29 +64,29 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
           )}
 
           {/* Product badge */}
-          {product.badge && (
+          {displayProduct.badge && (
             <span className="absolute top-2 right-2 bg-amber-400 text-amber-900 text-[10px] font-bold px-1.5 py-0.5 rounded-lg">
-              {product.badge}
+              {displayProduct.badge}
             </span>
           )}
 
           {/* Wishlist & Quick view overlay */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
           <div className="absolute top-2 right-2 flex flex-col gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            {!product.badge && (
+            {!displayProduct.badge && (
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  toggleItem(product);
+                  toggleItem(displayProduct);
                 }}
                 className={`w-7 h-7 rounded-full flex items-center justify-center shadow-md transition-colors ${
-                  isWishlisted(product.id)
+                    isWishlisted(displayProduct.id)
                     ? "bg-rose-500 text-white"
                     : "bg-white text-gray-600 hover:text-rose-500"
                 }`}
                 aria-label="Add to wishlist"
               >
-                <Heart className="w-3.5 h-3.5" fill={isWishlisted(product.id) ? "currentColor" : "none"} />
+                <Heart className="w-3.5 h-3.5" fill={isWishlisted(displayProduct.id) ? "currentColor" : "none"} />
               </button>
             )}
           </div>
@@ -84,12 +95,12 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
         {/* Content */}
         <div className="p-3">
           <p className="text-[11px] text-green-600 font-semibold uppercase tracking-wide mb-0.5">
-            {product.brand}
+            {displayProduct.brand}
           </p>
           <h3 className="text-sm font-semibold text-gray-800 line-clamp-2 leading-snug mb-1.5">
-            {product.name}
+            {displayProduct.name}
           </h3>
-          <p className="text-[11px] text-gray-400 mb-2">{product.weight}</p>
+          <p className="text-[11px] text-gray-400 mb-2">{displayProduct.weight}</p>
 
           {/* Rating */}
           <div className="flex items-center gap-1 mb-3">
@@ -98,24 +109,24 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
                 <Star
                   key={i}
                   className={`w-3 h-3 ${
-                    i < Math.floor(product.rating)
+                    i < Math.floor(displayProduct.rating)
                       ? "text-amber-400 fill-amber-400"
                       : "text-gray-200 fill-gray-200"
                   }`}
                 />
               ))}
             </div>
-            <span className="text-[11px] text-gray-400">({product.reviewCount.toLocaleString()})</span>
+            <span className="text-[11px] text-gray-400">({displayProduct.reviewCount.toLocaleString()})</span>
           </div>
 
           {/* Price */}
           <div className="flex items-center gap-2 mb-3">
             <span className="text-base font-bold text-gray-900">
-              {formatPrice(product.price)}
+              {formatPrice(displayProduct.price)}
             </span>
-            {product.originalPrice > product.price && (
+            {displayProduct.originalPrice > displayProduct.price && (
               <span className="text-xs text-gray-400 line-through">
-                {formatPrice(product.originalPrice)}
+                {formatPrice(displayProduct.originalPrice)}
               </span>
             )}
           </div>
@@ -124,7 +135,11 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
 
       {/* Add to cart */}
       <div className="px-3 pb-3">
-        {qty > 0 ? (
+        {!displayProduct.inStock ? (
+          <div className="w-full py-2 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm font-semibold text-center">
+            Out of Stock
+          </div>
+        ) : qty > 0 ? (
           <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl overflow-hidden">
             <button
               onClick={() => updateQuantity(product.id, qty - 1)}
@@ -151,7 +166,7 @@ export default function ProductCard({ product, className = "" }: ProductCardProp
                 ? "bg-green-600 text-white"
                 : "border-2 border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
             }`}
-            aria-label={`Add ${product.name} to cart`}
+            aria-label={`Add ${displayProduct.name} to cart`}
           >
             {justAdded ? (
               <>

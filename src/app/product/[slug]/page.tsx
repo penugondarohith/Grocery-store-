@@ -15,12 +15,24 @@ import { getReviewsByProduct } from "@/data/reviews";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 import { formatPrice } from "@/lib/utils";
+import { useAdminData } from "@/context/AdminDataContext";
 import { notFound } from "next/navigation";
 
 export default function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug: id } = use(params);
+  const { getProductOverride } = useAdminData();
   const product = getProductById(id);
   if (!product) return notFound();
+
+  const override = getProductOverride(id);
+  const displayProduct = override ? {
+    ...product,
+    name: override.name ?? product.name,
+    price: override.price ?? product.price,
+    originalPrice: override.originalPrice ?? product.originalPrice,
+    image: override.image ?? product.image,
+    inStock: override.inStock ?? product.inStock,
+  } : product;
 
   const router = useRouter();
   const related = getRelatedProducts(id, product.categorySlug);
@@ -34,16 +46,16 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [activeTab, setActiveTab] = useState<"desc" | "specs" | "reviews">("desc");
   const [addedToCart, setAddedToCart] = useState(false);
 
-  const cartQty = getItemQuantity(product.id);
+  const cartQty = getItemQuantity(displayProduct.id);
 
   const handleAddToCart = () => {
-    for (let i = 0; i < qty; i++) addItem(product);
+    for (let i = 0; i < qty; i++) addItem(displayProduct);
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   };
 
   const handleBuyNow = () => {
-    for (let i = 0; i < qty; i++) addItem(product);
+    for (let i = 0; i < qty; i++) addItem(displayProduct);
     router.push("/checkout");
   };
 
@@ -132,7 +144,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
           {/* Stock */}
           <div className="mt-4">
-            {product.inStock ? (
+            {displayProduct.inStock ? (
               <span className="flex items-center gap-1.5 text-sm text-green-600 font-semibold">
                 <Check className="w-4 h-4" /> In Stock
               </span>
@@ -164,7 +176,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <motion.button
               whileTap={{ scale: 0.97 }}
               onClick={handleAddToCart}
-              disabled={!product.inStock}
+              disabled={!displayProduct.inStock}
               className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-2xl font-bold text-base transition-all ${
                 addedToCart
                   ? "bg-green-600 text-white"
@@ -176,7 +188,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <motion.button
               whileTap={{ scale: 0.97 }}
               onClick={handleBuyNow}
-              disabled={!product.inStock}
+              disabled={!displayProduct.inStock}
               className="flex-1 py-3.5 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-colors disabled:opacity-50"
             >
               Buy Now
