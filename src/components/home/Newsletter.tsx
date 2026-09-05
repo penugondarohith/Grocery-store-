@@ -4,6 +4,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, Send, CheckCircle } from "lucide-react";
 
+const NEWSLETTER_BUBBLES = [
+  [32, 35, 12, 85], [98, 77, 83, 44], [69, 69, 11, 25], [57, 45, 48, 96],
+  [92, 45, 80, 57], [76, 24, 52, 8], [36, 25, 87, 39], [89, 60, 75, 73],
+  [87, 63, 84, 3], [40, 31, 8, 68], [56, 49, 45, 59], [53, 77, 2, 3],
+  [64, 29, 46, 46], [66, 26, 80, 94], [34, 82, 81, 11], [52, 23, 91, 30],
+  [57, 32, 24, 85], [29, 38, 89, 92], [33, 65, 31, 84], [34, 67, 98, 57],
+] as const;
+
 export default function Newsletter() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -26,16 +34,16 @@ export default function Newsletter() {
       >
         {/* Background pattern */}
         <div className="absolute inset-0 opacity-10">
-          {[...Array(20)].map((_, i) => (
+          {NEWSLETTER_BUBBLES.map(([width, height, top, left], i) => (
             <div
               key={i}
               className="absolute rounded-full bg-white"
               style={{
-                width: Math.random() * 80 + 20,
-                height: Math.random() * 80 + 20,
-                top: `${Math.random() * 100}%`,
-                left: `${Math.random() * 100}%`,
-                transform: "translate(-50%,-50%)",
+                width,
+                height,
+                top: `${top}%`,
+                left: `${left}%`,
+                transform: "translate(-50%, -50%)",
               }}
             />
           ))}

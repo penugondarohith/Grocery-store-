@@ -1,12 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Suppress the middleware→proxy deprecation warning for Next.js 16
-  experimental: {
-    // Suppress the middleware→proxy deprecation warning
-    after: true,
-  },
-
   async redirects() {
     return [
       // /product/[id] used to be the route — now [slug] is canonical
