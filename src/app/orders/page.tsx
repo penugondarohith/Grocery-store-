@@ -24,6 +24,11 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.
   delivered:        { label: 'Delivered',        color: 'text-green-700 bg-green-50 border-green-200',  icon: CheckCircle2 },
   cancelled:        { label: 'Cancelled',        color: 'text-red-600 bg-red-50 border-red-200',        icon: XCircle },
   refunded:         { label: 'Refunded',         color: 'text-gray-600 bg-gray-50 border-gray-200',     icon: RotateCcw },
+  DELIVERY_ASSIGNED: { label: 'Delivery Assigned', color: 'text-blue-600 bg-blue-50 border-blue-200', icon: Truck },
+  DELIVERY_ACCEPTED: { label: 'Accepted by Partner', color: 'text-indigo-600 bg-indigo-50 border-indigo-200', icon: Truck },
+  PICKED_UP:        { label: 'Picked Up',        color: 'text-cyan-600 bg-cyan-50 border-cyan-200', icon: Truck },
+  ARRIVING:         { label: 'Arriving',         color: 'text-orange-600 bg-orange-50 border-orange-200', icon: Truck },
+  DELIVERY_FAILED:  { label: 'Delivery Failed',  color: 'text-red-600 bg-red-50 border-red-200', icon: XCircle },
 };
 
 function OrderCard({ order }: { order: OrderRow }) {

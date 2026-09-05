@@ -35,7 +35,7 @@ export async function updateSession(request: NextRequest) {
   }
 
   // Protected customer routes
-  const protectedPaths = ['/dashboard', '/checkout'];
+  const protectedPaths = ['/dashboard'];
   if (!user && protectedPaths.some((p) => pathname.startsWith(p))) {
     return NextResponse.redirect(new URL('/login', request.url));
   }

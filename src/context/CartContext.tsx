@@ -1,7 +1,7 @@
 "use client";
 
 import React, {
-  createContext, useContext, useReducer, ReactNode, useEffect,
+  createContext, useContext, useReducer, ReactNode, useEffect, useState,
 } from "react";
 import { Product } from "@/data/products";
 
@@ -118,6 +118,7 @@ const INITIAL_STATE: CartState = { items: [], savedItems: [] };
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, INITIAL_STATE);
+  const [hasHydrated, setHasHydrated] = useState(false);
 
   // Hydrate from localStorage on mount
   useEffect(() => {
@@ -127,13 +128,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const parsed: CartState = JSON.parse(stored);
         dispatch({ type: "HYDRATE", state: parsed });
       }
+      setHasHydrated(true);
     } catch { /* ignore */ }
   }, []);
 
   // Persist to localStorage on every change
   useEffect(() => {
+    if (!hasHydrated) return;
     localStorage.setItem(CART_KEY, JSON.stringify(state));
-  }, [state]);
+  }, [hasHydrated, state]);
 
   const itemCount = state.items.reduce((sum, i) => sum + i.quantity, 0);
   const subtotal = state.items.reduce((sum, i) => sum + i.price * i.quantity, 0);

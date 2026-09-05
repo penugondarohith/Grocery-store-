@@ -11,6 +11,8 @@ import Link from 'next/link';
 import { formatPrice } from '@/lib/utils';
 import { getLocalOrderById, updateLocalOrderStatus } from '@/services/localOrderService';
 import { Order } from '@/types/checkout';
+import { useDeliveryData } from '@/context/DeliveryDataContext';
+import DeliveryTimeline from '@/components/delivery/DeliveryTimeline';
 
 const STATUSES = ['pending', 'confirmed', 'processing', 'packed', 'out_for_delivery', 'delivered', 'cancelled'];
 
@@ -62,6 +64,7 @@ export default function AdminOrderDetailPage() {
   const [savingStatus, setSavingStatus] = useState(false);
   const [toast, setToast] = useState('');
   const [showCancel, setShowCancel] = useState(false);
+  const { partners, getDeliveryForOrder, assignDelivery, reassignDelivery } = useDeliveryData();
 
   const load = () => {
     const o = getLocalOrderById(id);
@@ -115,6 +118,8 @@ export default function AdminOrderDetailPage() {
   const statusCfg = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = statusCfg.icon;
   const currentIdx = TIMELINE.indexOf(order.status);
+  const delivery = getDeliveryForOrder(order.id ?? order.order_number);
+  const eligiblePartners = partners.filter(p => p.isActive && p.activeDeliveries < p.maxConcurrentDeliveries);
 
   return (
     <div className="space-y-5">
@@ -268,6 +273,10 @@ export default function AdminOrderDetailPage() {
           </div>
 
           {/* Customer / Delivery */}
+          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <h3 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2"><Truck className="w-4 h-4 text-green-600" /> Delivery Assignment</h3>
+            {delivery ? <><DeliveryTimeline status={delivery.status} compact /><select defaultValue={delivery.deliveryPartnerId ?? ''} onChange={e => reassignDelivery(delivery.id, e.target.value)} className="w-full mt-3 border rounded-xl p-2.5 text-sm"><option value="">Select partner</option>{partners.map(p => <option key={p.id} value={p.id}>{p.name} ({p.status})</option>)}</select><p className="text-xs text-gray-500 mt-2">OTP: {delivery.proofOfDelivery}</p></> : <select defaultValue="" onChange={e => { if (e.target.value) assignDelivery(order.id ?? order.order_number, e.target.value); }} className="w-full border rounded-xl p-2.5 text-sm"><option value="">Assign a partner</option>{eligiblePartners.map(p => <option key={p.id} value={p.id}>{p.name} · {p.status}</option>)}</select>}
+          </div>
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <h3 className="font-bold text-gray-900 text-sm mb-3 flex items-center gap-2">
               <MapPin className="w-4 h-4 text-green-600" /> Delivery Address

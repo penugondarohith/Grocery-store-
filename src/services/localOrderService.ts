@@ -80,6 +80,14 @@ export function updateLocalOrderStatus(
   } catch {}
 }
 
+/** Update delivery-specific fields without changing the storefront status. */
+export function updateLocalOrderDelivery(
+  idOrNumber: string,
+  fields: Pick<Order, 'delivery_partner_id' | 'delivery_status' | 'delivery_otp' | 'delivery_id'>,
+): void {
+  updateLocalOrderStatus(idOrNumber, getLocalOrderById(idOrNumber)?.status ?? 'pending', fields);
+}
+
 /** Get counts by status for admin dashboard. */
 export function getLocalOrderStats() {
   const orders = getLocalOrders();
@@ -92,6 +100,9 @@ export function getLocalOrderStats() {
     confirmed: orders.filter(o => o.status === 'confirmed').length,
     delivered: orders.filter(o => o.status === 'delivered').length,
     cancelled: orders.filter(o => o.status === 'cancelled').length,
+    activeDeliveries: orders.filter(o => ['OUT_FOR_DELIVERY', 'ARRIVING'].includes(o.delivery_status ?? '')).length,
+    deliveredToday: orders.filter(o => o.delivery_status === 'DELIVERED' && new Date(o.updated_at ?? 0) >= todayStart).length,
+    failedDeliveries: orders.filter(o => o.delivery_status === 'DELIVERY_FAILED').length,
     totalRevenue: orders
       .filter(o => !['cancelled', 'refunded'].includes(o.status))
       .reduce((s, o) => s + (o.total ?? 0), 0),

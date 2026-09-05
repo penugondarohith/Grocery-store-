@@ -9,7 +9,7 @@ interface ConditionalShellProps {
   children: ReactNode;
 }
 
-const FULLSCREEN_ROUTES = ['/admin'];
+const FULLSCREEN_ROUTES = ['/admin', '/delivery'];
 
 export default function ConditionalShell({ navbar, footer, children }: ConditionalShellProps) {
   const pathname = usePathname();

@@ -12,6 +12,11 @@ import { formatPrice } from '@/lib/utils';
 import { getOrderById } from '@/services/orderService';
 import { getLocalOrderById } from '@/services/localOrderService';
 import { toOrderDetail, OrderDetail, TrackingEvent } from '@/lib/orderAdapter';
+import { useDeliveryData } from '@/context/DeliveryDataContext';
+import DeliveryTimeline from '@/components/delivery/DeliveryTimeline';
+import DeliveryMap from '@/components/delivery/DeliveryMap';
+import DeliveryETA from '@/components/delivery/DeliveryETA';
+import DeliveryPartnerCard from '@/components/delivery/DeliveryPartnerCard';
 
 const STATUS_STEPS = ['pending', 'confirmed', 'processing', 'packed', 'out_for_delivery', 'delivered'];
 const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
@@ -99,6 +104,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { getDeliveryForOrder, partners } = useDeliveryData();
 
   useEffect(() => {
     async function load() {
@@ -173,6 +179,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
 
   const sc = STATUS_CONFIG[order.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = sc.icon;
+  const delivery = getDeliveryForOrder(order.id);
+  const deliveryStatus = delivery?.status ?? order.deliveryStatus;
+  const deliveryPartner = deliveryStatus && delivery?.deliveryPartnerId
+    ? partners.find(partner => partner.id === delivery.deliveryPartnerId)
+    : null;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
@@ -226,6 +237,18 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             </p>
           </div>
         </motion.div>
+      )}
+
+      {deliveryStatus && (
+        <div className="space-y-4">
+          <DeliveryETA minutes={delivery?.estimatedMinutes ?? order.estimatedMinutes ?? 30} status={deliveryStatus} />
+          <DeliveryMap status={deliveryStatus} />
+          {deliveryPartner && <DeliveryPartnerCard partner={deliveryPartner} />}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+            <h2 className="font-bold text-gray-900 mb-5">Delivery Tracking</h2>
+            <DeliveryTimeline status={deliveryStatus} />
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

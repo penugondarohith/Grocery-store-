@@ -1,0 +1,14 @@
+'use client';
+
+import { Activity, CheckCircle2, Clock3, Truck, XCircle } from 'lucide-react';
+import { useDeliveryData } from '@/context/DeliveryDataContext';
+
+export default function DeliveryAnalyticsPage() {
+  const { deliveries, partners } = useDeliveryData();
+  const active = deliveries.filter(d => !['DELIVERED', 'DELIVERY_FAILED', 'CANCELLED'].includes(d.status));
+  const delivered = deliveries.filter(d => d.status === 'DELIVERED');
+  const failed = deliveries.filter(d => d.status === 'DELIVERY_FAILED');
+  const onTime = delivered.length ? Math.round((delivered.filter(d => d.estimatedMinutes <= 45).length / delivered.length) * 100) : 0;
+  return <div className="space-y-5"><div><h1 className="text-2xl font-bold">Delivery Analytics</h1><p className="text-sm text-gray-500">Live fulfillment performance from local delivery data</p></div><div className="grid grid-cols-2 lg:grid-cols-5 gap-3"><Metric icon={Activity} label="Active" value={active.length} /><Metric icon={Truck} label="Total" value={deliveries.length} /><Metric icon={CheckCircle2} label="Delivered" value={delivered.length} /><Metric icon={XCircle} label="Failed" value={failed.length} /><Metric icon={Clock3} label="On time" value={`${onTime}%`} /></div><div className="grid lg:grid-cols-2 gap-5"><div className="bg-white rounded-2xl border border-gray-100 p-5"><h2 className="font-bold mb-4">Status distribution</h2>{['DELIVERY_ASSIGNED', 'DELIVERY_ACCEPTED', 'PICKED_UP', 'OUT_FOR_DELIVERY', 'ARRIVING', 'DELIVERED', 'DELIVERY_FAILED'].map(status => { const count = deliveries.filter(d => d.status === status).length; return <div key={status} className="flex items-center gap-3 mb-3"><span className="w-32 text-xs text-gray-500">{status.replace(/_/g, ' ')}</span><div className="h-2 flex-1 rounded-full bg-gray-100"><div className="h-2 rounded-full bg-green-500" style={{ width: `${deliveries.length ? Math.max(3, count / deliveries.length * 100) : 0}%` }} /></div><span className="text-xs font-bold">{count}</span></div>; })}</div><div className="bg-white rounded-2xl border border-gray-100 p-5"><h2 className="font-bold mb-4">Partner performance</h2>{partners.map(p => <div key={p.id} className="flex items-center gap-3 py-3 border-b last:border-0"><div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center text-xs font-bold text-green-700">{p.name.split(' ').map(n => n[0]).join('')}</div><span className="flex-1 text-sm font-semibold">{p.name}</span><span className="text-xs text-gray-500">{p.completedDeliveries} complete · {p.rating.toFixed(1)} ★</span></div>)}</div></div></div>;
+}
+function Metric({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: number | string }) { return <div className="bg-white rounded-2xl border border-gray-100 p-4"><Icon className="w-4 h-4 text-green-600" /><p className="text-2xl font-black mt-2">{value}</p><p className="text-xs text-gray-500">{label}</p></div>; }

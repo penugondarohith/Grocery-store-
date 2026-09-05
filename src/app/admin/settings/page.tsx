@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, Check, Store, Truck, CreditCard, Clock, Save } from 'lucide-react';
 import { useAdminData } from '@/context/AdminDataContext';
+import { useDeliveryData } from '@/context/DeliveryDataContext';
 
 export default function AdminSettingsPage() {
   const { state, updateSettings } = useAdminData();
+  const { slots, updateSlots } = useDeliveryData();
   const [form, setForm] = useState({ ...state.settings });
   const [saved, setSaved] = useState(false);
 
@@ -116,6 +118,10 @@ export default function AdminSettingsPage() {
             <Input type="number" value={form.minOrderValue} onChange={v => f('minOrderValue', Number(v))} />
           </Field>
         </div>
+      </Section>
+
+      <Section title="Delivery Slot Configuration" icon={Clock}>
+        {slots.map(slot => <div key={slot.id} className="grid grid-cols-[1fr_80px_80px_70px] gap-2 items-center"><div><p className="text-sm font-semibold text-gray-800">{slot.label}</p><p className="text-xs text-gray-400">{slot.startTime} - {slot.endTime}</p></div><input type="number" min={0} value={slot.capacity} onChange={e => updateSlots(slots.map(item => item.id === slot.id ? { ...item, capacity: Number(e.target.value) } : item))} className="border rounded-lg p-2 text-sm" /><span className="text-xs text-gray-500">capacity</span><button onClick={() => updateSlots(slots.map(item => item.id === slot.id ? { ...item, enabled: !item.enabled } : item))} className={`text-xs font-bold rounded-lg px-2 py-2 ${slot.enabled ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{slot.enabled ? 'On' : 'Off'}</button></div>)}
       </Section>
 
       <Section title="Payment & Tax" icon={CreditCard}>

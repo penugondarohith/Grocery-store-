@@ -144,8 +144,17 @@ export default function AddressStep() {
     setAddresses((prev) => prev.map((a) => ({ ...a, is_default: a.id === id })));
   };
 
-  // ── "Continue to Delivery" should be enabled if an address is selected ──
-  const canProceed = !!selectedAddress;
+  const handleContinue = () => {
+    if (showForm) {
+      void handleSave();
+      return;
+    }
+    if (selectedAddress) {
+      nextStep();
+      return;
+    }
+    openAddForm();
+  };
 
   return (
     <div>
@@ -271,8 +280,8 @@ export default function AddressStep() {
 
       {/* Proceed button — enabled as soon as an address is selected/saved */}
       <button
-        onClick={nextStep}
-        disabled={!canProceed}
+        onClick={handleContinue}
+        disabled={saving}
         className="w-full mt-5 py-3.5 bg-green-600 text-white font-bold rounded-2xl hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Continue to Delivery →

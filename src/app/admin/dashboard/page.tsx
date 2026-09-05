@@ -12,6 +12,7 @@ import { getLocalOrders } from '@/services/localOrderService';
 import { useAdminData } from '@/context/AdminDataContext';
 import { products as staticProducts } from '@/data/products';
 import { Order } from '@/types/checkout';
+import { useDeliveryData } from '@/context/DeliveryDataContext';
 
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -74,6 +75,7 @@ function MiniBarChart({ data }: { data: { day: string; orders: number; revenue: 
 
 export default function AdminDashboardPage() {
   const { state } = useAdminData();
+  const { deliveries, partners } = useDeliveryData();
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
@@ -219,6 +221,18 @@ export default function AdminDashboardPage() {
           <StatCard label="Delivered" value={String(stats.orders.completed)} icon={CheckCircle2} color="text-emerald-600 bg-emerald-50" href="/admin/orders?status=delivered" />
           <StatCard label="Cancelled" value={String(stats.orders.cancelled)} icon={ShoppingBag} color="text-red-600 bg-red-50" href="/admin/orders?status=cancelled" />
           <StatCard label="Customers" value={String(stats.customers.total)} icon={Users} color="text-purple-600 bg-purple-50" href="/admin/customers" />
+        </div>
+      </div>
+
+      {/* Products KPIs */}
+      <div>
+        <div className="flex items-center justify-between mb-3"><h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Delivery</h2><Link href="/admin/delivery" className="text-xs text-green-600 font-semibold">View analytics →</Link></div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <StatCard label="Active Deliveries" value={String(deliveries.filter(d => !['DELIVERED', 'DELIVERY_FAILED', 'CANCELLED'].includes(d.status)).length)} icon={ShoppingBag} color="text-blue-600 bg-blue-50" />
+          <StatCard label="Out for Delivery" value={String(deliveries.filter(d => ['OUT_FOR_DELIVERY', 'ARRIVING'].includes(d.status)).length)} icon={Package} color="text-orange-600 bg-orange-50" />
+          <StatCard label="Delivered Today" value={String(deliveries.filter(d => d.status === 'DELIVERED' && new Date(d.deliveredAt ?? 0).toDateString() === new Date().toDateString()).length)} icon={CheckCircle2} color="text-green-600 bg-green-50" />
+          <StatCard label="Failed" value={String(deliveries.filter(d => d.status === 'DELIVERY_FAILED').length)} icon={AlertTriangle} color="text-red-600 bg-red-50" />
+          <StatCard label="Available Partners" value={`${partners.filter(p => p.status === 'ONLINE').length}/${partners.length}`} icon={Users} color="text-violet-600 bg-violet-50" href="/admin/delivery-partners" />
         </div>
       </div>
 

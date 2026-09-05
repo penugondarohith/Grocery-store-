@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Percent, Gift,
   BarChart2, Settings, LogOut, Bell, ChevronLeft, ChevronRight,
-  Warehouse, Star, Menu, X, Tag, CreditCard, Image, ClipboardList, FolderOpen,
+  Warehouse, Star, Menu, X, Tag, CreditCard, Image, ClipboardList, FolderOpen, Truck,
 } from 'lucide-react';
 import { useAuthContext } from '@/context/AuthContext';
 import { useAdminData } from '@/context/AdminDataContext';
@@ -41,6 +41,13 @@ const NAV_GROUPS = [
       { href: '/admin/orders', label: 'Orders', icon: ShoppingBag },
       { href: '/admin/payments', label: 'Payments', icon: CreditCard },
       { href: '/admin/customers', label: 'Customers', icon: Users },
+    ],
+  },
+  {
+    label: 'Delivery',
+    items: [
+      { href: '/admin/delivery', label: 'Delivery Analytics', icon: Truck },
+      { href: '/admin/delivery-partners', label: 'Delivery Partners', icon: Users },
     ],
   },
   {

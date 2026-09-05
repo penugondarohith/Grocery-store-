@@ -16,6 +16,8 @@ export interface OrderRow {
   placedAt: string;
   estimatedDeliveryAt: string | null;
   deliveredAt: string | null;
+  deliveryStatus: string | null;
+  deliveryPartnerId: string | null;
   address: { line1: string; city: string; state: string; pincode: string } | null;
   payment: { method: string; status: string } | null;
   latestTracking: { description: string | null; trackedAt: string } | null;
@@ -53,6 +55,10 @@ export interface OrderDetail {
   placedAt: string;
   estimatedDeliveryAt: string | null;
   deliveredAt: string | null;
+  deliveryStatus: string | null;
+  deliveryPartnerId: string | null;
+  deliveryOtp: string | null;
+  estimatedMinutes: number | null;
   notes: string | null;
   address: {
     label: string;
@@ -93,6 +99,7 @@ const STATUS_PROGRESSION = [
   'processing',
   'packed',
   'out_for_delivery',
+  'arriving',
   'delivered',
 ];
 
@@ -111,6 +118,7 @@ function buildSimulatedTracking(
     processing: 'Your items are being prepared',
     packed: 'Your order is packed and ready for pickup',
     out_for_delivery: 'Your order is out for delivery',
+    arriving: 'Your delivery partner is arriving soon',
     delivered: 'Your order has been delivered. Enjoy!',
   };
 
@@ -142,6 +150,8 @@ export function toOrderRow(order: Order): OrderRow {
     placedAt: order.created_at ?? new Date().toISOString(),
     estimatedDeliveryAt: null,
     deliveredAt: order.status === 'delivered' ? new Date().toISOString() : null,
+    deliveryStatus: order.delivery_status ?? null,
+    deliveryPartnerId: order.delivery_partner_id ?? null,
     address: addr
       ? {
           line1: addr.address_line ?? '',
@@ -194,6 +204,10 @@ export function toOrderDetail(order: Order): OrderDetail {
     placedAt,
     estimatedDeliveryAt: null,
     deliveredAt: order.status === 'delivered' ? new Date().toISOString() : null,
+    deliveryStatus: order.delivery_status ?? null,
+    deliveryPartnerId: order.delivery_partner_id ?? null,
+    deliveryOtp: order.delivery_otp ?? null,
+    estimatedMinutes: order.delivery_status && !['DELIVERED', 'CANCELLED'].includes(order.delivery_status) ? 30 : null,
     notes: null,
     address: addr
       ? {

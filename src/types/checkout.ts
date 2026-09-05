@@ -62,6 +62,10 @@ export interface Order {
   items: OrderItem[];
   created_at?: string;
   updated_at?: string;
+  delivery_partner_id?: string;
+  delivery_status?: string;
+  delivery_otp?: string;
+  delivery_id?: string;
 }
 
 export type CheckoutStep = 1 | 2 | 3 | 4;
