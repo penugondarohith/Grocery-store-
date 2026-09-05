@@ -327,8 +327,30 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
 
   const setStock = useCallback((productId: string, productName: string, newStock: number, reason: string) => {
     const current = getCurrentStock(productId) ?? 0;
-    adjustStock(productId, productName, newStock - current, reason);
-  }, [getCurrentStock, adjustStock]);
+    const normalizedStock = Math.max(0, newStock);
+
+    // Static catalog products have no stored stock until the first explicit set.
+    // Write the requested value directly instead of routing through adjustStock's
+    // default stock baseline.
+    if (!state.adminProducts.find(p => p.id === productId)) {
+      setProductOverride(productId, { stock: normalizedStock, inStock: normalizedStock > 0 });
+      const entry: InventoryLogEntry = {
+        id: generateOrderId(), productId, productName,
+        change: normalizedStock - current, reason,
+        previousStock: current, newStock: normalizedStock,
+        performedBy: 'Admin', timestamp: new Date().toISOString(),
+      };
+      setState(prev => {
+        const updated = [entry, ...prev.inventoryLog].slice(0, 500);
+        save('vlgs_admin_inv_log', updated);
+        return { ...prev, inventoryLog: updated };
+      });
+      logAction('INVENTORY_SET', 'Inventory', `Set stock to ${normalizedStock} for ${productName} (${reason})`, productId);
+      return;
+    }
+
+    adjustStock(productId, productName, normalizedStock - current, reason);
+  }, [adjustStock, getCurrentStock, logAction, setProductOverride, state.adminProducts]);
 
   // ─── Coupons ──────────────────────────────────────────────────────────────
 
