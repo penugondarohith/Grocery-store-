@@ -12,6 +12,7 @@ import { createOrder, generateOrderNumber } from '@/services/orderService';
 import { saveOrderLocally } from '@/services/localOrderService';
 import { Order, OrderItem } from '@/types/checkout';
 import { useRouter } from 'next/navigation';
+import { useAdminData } from '@/context/AdminDataContext';
 
 function SummaryRow({ label, value, highlight, negative }: { label: string; value: string; highlight?: boolean; negative?: boolean }) {
   return (
@@ -29,6 +30,7 @@ export default function ReviewStep() {
   const { items, subtotal, taxes, deliveryFee, clearCart } = useCart();
   const { user } = useAuthContext();
   const { addOrderNotification } = useNotifications();
+  const { adjustStock } = useAdminData();
   const router = useRouter();
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState('');
@@ -104,6 +106,11 @@ export default function ReviewStep() {
       // Always persist locally so /orders page can display this order
       // regardless of whether Supabase or Prisma is available
       saveOrderLocally({ ...createdOrder, created_at: createdOrder.created_at ?? new Date().toISOString() });
+
+      // Decrement inventory only after the order has been created successfully.
+      for (const item of items) {
+        adjustStock(item.id, item.name, -item.quantity, 'Order placed');
+      }
 
       // Notify admin
       addOrderNotification({
